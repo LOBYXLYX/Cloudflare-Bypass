@@ -12,3 +12,5 @@ cf = CF_Solver('https://tempail.com')
 cookie2 = cf.cookie()
 print(cookie2)
 ```
+
+discord: lyxz2
