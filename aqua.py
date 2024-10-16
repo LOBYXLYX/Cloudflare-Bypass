@@ -96,13 +96,15 @@ class CF_Solver(CF_MetaData):
         clientRequest: typing.Any = None, 
         userAgent: str = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
         jsd_main : str = '/cdn-cgi/challenge-platform/scripts/jsd/main.js',
-        jsd_request: str = '/cdn-cgi/challenge-platform/h/g/jsd/r'
+        jsd_request: str = '/cdn-cgi/challenge-platform/h/g/jsd/r',
+        proxy: typing.Union[str, dict] = None
     ):
         self.domain = domain
         self.client = clientRequest
         self.userAgent = userAgent
         self.jsd_main = jsd_main
         self.jsd_request = jsd_request
+        self.proxy_obj = proxy
 
         if self.client is None:
             self.client = httpx.Client(
@@ -112,6 +114,7 @@ class CF_Solver(CF_MetaData):
                     'referer': self.domain + '/',
                     'origin': self.domain
                 },
+                proxy=self._proxy_dict(),
                 timeout=10
             )
 
@@ -124,6 +127,12 @@ class CF_Solver(CF_MetaData):
             jsd_main_url=self.jsd_main
         )
 
+    def _proxy_dict(self):
+        if 'https://' in self.proxy_obj:
+            return self.proxy
+        else:
+            return 'https://' + self.proxy_obj
+
     def cookie(self):
         wb, s_param, self.cf_ray = self.cf_cookie_parse()
         payload = {
@@ -135,3 +144,14 @@ class CF_Solver(CF_MetaData):
             json=payload
         )
         return jsd.cookies['cf_clearance']
+
+
+if __name__ == '__main__':
+    cf = CF_Solver(
+        'https://tempail.com',
+        proxy='165.155.229.11'
+        #jsd_main='/cdn-cgi/challenge-platform/h/b/scripts/jsd/62ec4f065604/main.js',
+        #jsd_request='/cdn-cgi/challenge-platform/h/b/jsd/r'
+    )
+    a = cf.cookie()
+    print(a)
