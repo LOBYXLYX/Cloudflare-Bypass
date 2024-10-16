@@ -145,13 +145,3 @@ class CF_Solver(CF_MetaData):
             json=payload
         )
         return jsd.cookies['cf_clearance']
-
-
-if __name__ == '__main__':
-    cf = CF_Solver(
-        'https://tempail.com'
-        #jsd_main='/cdn-cgi/challenge-platform/h/b/scripts/jsd/62ec4f065604/main.js',
-        #jsd_request='/cdn-cgi/challenge-platform/h/b/jsd/r'
-    )
-    a = cf.cookie()
-    print(a)
