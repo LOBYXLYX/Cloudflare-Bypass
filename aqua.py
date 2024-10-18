@@ -130,7 +130,7 @@ class CF_Solver(CF_MetaData):
     def _proxy_dict(self):
         if self.proxy_obj is not None:
             if 'https://' in self.proxy_obj:
-                return self.proxy
+                return self.proxy_obj
             else:
                 return 'https://' + self.proxy_obj
 
