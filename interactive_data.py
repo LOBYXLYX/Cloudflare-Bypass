@@ -1,3 +1,7 @@
+"""
+Trying to bypass Cloudflare Captcha xd
+"""
+
 import json
 import httpx
 import random
