@@ -1,10 +1,11 @@
 import json
 import httpx
 import typing
+import requests as cf_captcha_req # requests its a ass
 import subprocess
 from dataclasses import dataclass
 from wb_base_data import wbBaseData
-
+import sys
 
 @dataclass
 class CF_MetaData:
@@ -27,15 +28,30 @@ class CF_MetaData:
                 break
         return s_param, cf_ray
 
-    def _get_sitekey_value(self):
+    def _get_sitekey_value(self) -> tuple[str, str]:
         r = self.clientRequest.get(self.domain + self.jsd_main_url, follow_redirects=True).text
-        spli1 = r.split("ah='")[1].split(',')
+        spli1 = r.split("ah='")[1].split(',')      
+        func_g = r.split("'g'")[1].split("},'")[0].split('1.')
+
+        wb_float_gens = ''
+
+        for i, v in enumerate(func_g):
+            if v[:2].isnumeric() or v[:1].isnumeric():
+                parsed_length = 2 if v[:2].isnumeric() else 1
+                wb_float_gens += '1.' + v[:parsed_length] + ','
+
+            if v[:3] == '1|1' and (v[:4].split('|')[1].isnumeric() or v[:5].split('|')[1].isnumeric()):
+
+                parsed_length = 4 if v[:4].split('|')[1].isnumeric() else 5
+                wb_float_gens += '1.' + v[:parsed_length].split('|')[1] + ','
+
+        wb_float_gens = wb_float_gens[:len(wb_float_gens) - 1]
 
         for i, v in enumerate(spli1):
             if len(v) == 65:
                 siteKey = v
                 break
-        return siteKey
+        return siteKey, wb_float_gens # convert list to str
 
     def cf_cookie_parse(self) -> tuple[str, typing.Optional[str], str]:
         base_data = wbBaseData(
@@ -44,11 +60,10 @@ class CF_MetaData:
         )
 
         base_str = json.dumps(base_data, separators=(',', ':'))
-        siteKey = self._get_sitekey_value()
-        print('Site Key:', siteKey)
+        siteKey, wb_floats = self._get_sitekey_value()
 
         result = subprocess.run(
-            ['node', 'wb_encrypter.js', base_str, siteKey],
+            ['node', 'wb_encoder.js', base_str, siteKey, wb_floats],
             capture_output=True,
             text=True
         )
@@ -109,6 +124,8 @@ class CF_Solver(CF_MetaData):
         if self.client is None:
             self.client = httpx.Client(
                 headers={
+                    'accept': '*/*',
+                    'accept-language': 'es-US,es-419;q=0.9,es;q=0.8',
                     'user-agent': self.userAgent,
                     'content-type': 'application/json',
                     'referer': self.domain + '/',
@@ -130,7 +147,7 @@ class CF_Solver(CF_MetaData):
     def _proxy_dict(self):
         if self.proxy_obj is not None:
             if 'https://' in self.proxy_obj:
-                return self.proxy_obj
+                return self.proxy
             else:
                 return 'https://' + self.proxy_obj
 
@@ -145,3 +162,13 @@ class CF_Solver(CF_MetaData):
             json=payload
         )
         return jsd.cookies['cf_clearance']
+
+
+if __name__ == '__main__':
+    cf = CF_Solver(
+        'https://discord.com'
+        #jsd_main='/cdn-cgi/challenge-platform/h/b/scripts/jsd/62ec4f065604/main.js',
+        #jsd_request='/cdn-cgi/challenge-platform/h/b/jsd/r'
+    )
+    a = cf.cookie()
+    print(a)
