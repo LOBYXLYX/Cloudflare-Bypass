@@ -1,11 +1,14 @@
+import time
+import types
 import json
 import httpx
 import typing
-import requests as cf_captcha_req # requests its a ass
+import requests as cf_captcha_req
 import subprocess
+
 from dataclasses import dataclass
 from wb_base_data import wbBaseData
-import sys
+from interactive_data import parse_cf_params, CF_Interactive
 
 @dataclass
 class CF_MetaData:
@@ -14,6 +17,7 @@ class CF_MetaData:
     userAgent: typing.Optional[str]
 
     jsd_main_url: str
+    _domain_parsed: typing.Optional[str] = None
 
     def _get_s_parameter(self) -> tuple[typing.Optional[str], str]:
         r = self.clientRequest.get(self.domain + self.jsd_main_url, follow_redirects=True)
@@ -51,7 +55,11 @@ class CF_MetaData:
             if len(v) == 65:
                 siteKey = v
                 break
-        return siteKey, wb_float_gens # convert list to str
+        return siteKey, wb_float_gens # convert str to list
+
+    def _get_cf_ray(self):
+        r = self.clientRequest.get(self.domain).headers
+        return r['CF-RAY'].split('-')[0]
 
     def cf_cookie_parse(self) -> tuple[str, typing.Optional[str], str]:
         base_data = wbBaseData(
@@ -72,6 +80,51 @@ class CF_MetaData:
         s, cf_ray = self._get_s_parameter()
         return wb, s, cf_ray
 
+    def cf_orchestrate_js(self, auto_mode=False):
+        self._domain_parsed = 'https://' + self.domain.split('/')[2] if len(self.domain.split('/')) > 3 else self.domain
+        cf_ray = self._get_cf_ray()
+        print(cf_ray)
+    
+        self.clientRequest.headers.update({
+            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'accept-language': 'es-US,es-419;q=0.9,es;q=0.8',
+            'cache-control': 'max-age=0',
+            'sec-fetch-dest': 'document',
+            'sec-fetch-mode': 'navigate',
+            'sec-fetch-site': 'none',
+            'sec-fetch-user': '?1',
+            'upgrade-insecure-requests': '1'
+        })
+        params = {
+            'ray': cf_ray,
+        }
+        if auto_mode:
+            params['lang'] = 'auto'
+
+        chl = self.clientRequest.get(
+            f'{self._domain_parsed}/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1',
+            params=params
+        )
+        return chl.text
+
+    def parse_orchestrate_params(self, js) -> dict[str, typing.Union[str, None]]:
+        flow_data = {
+            'cf_flow_url': None,
+            'ass_param1': 'AgLK2',
+            'ass_param2': 'MEuBS5'
+        }
+
+        for i,v in enumerate(js.split('~/')):
+            if len(v.split(':')) > 2:
+                js2 = v.split('/~')
+                for s in js2:
+                    if str(round(time.time()))[:4] in s and len(s.split(':')) == 3:
+                        flow_data['cf_flow_url'] = s
+
+        #for i,v in enumerate(js.split("='")):
+        #    if len(v.split('~')) > 1000:
+        #        storaged_c
+        return flow_data
 
 class CF_Solver(CF_MetaData):
     """
@@ -102,12 +155,21 @@ class CF_Solver(CF_MetaData):
                 clientRequest=session
             )
             cookie = cf.cookie() # return cf_clearance cookie
+
+        - code 4 (turnstile solver):
+            cf = CF_Solver(
+                'https://nopecha.com/demo/cloudflare',
+                siteKey='0x4AAAAAAAAjq6WYeRDKmebM'
+            )
+            solved = cf.solve_turnstile()
+
     """
 
     def __init__(
         self, 
         domain: str, 
         *,
+        siteKey: str = None,
         clientRequest: typing.Any = None, 
         userAgent: str = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
         jsd_main : str = '/cdn-cgi/challenge-platform/scripts/jsd/main.js',
@@ -115,6 +177,7 @@ class CF_Solver(CF_MetaData):
         proxy: typing.Union[str, dict] = None
     ):
         self.domain = domain
+        self.siteKey = siteKey
         self.client = clientRequest
         self.userAgent = userAgent
         self.jsd_main = jsd_main
@@ -136,6 +199,9 @@ class CF_Solver(CF_MetaData):
             )
 
         self.cf_ray: typing.Optional[str] = None
+        self.baseStr = lambda base_dict: json.dumps(base_dict, separators=(',', ':'))
+        self.d: typing.Optional[str] = None
+        self.b: typing.Optional[str] = None
 
         super().__init__(
             domain=self.domain,
@@ -151,6 +217,77 @@ class CF_Solver(CF_MetaData):
             else:
                 return 'https://' + self.proxy_obj
 
+    def solve_flow_ov1(
+        self, 
+        flow_url,
+        encoder_path='interactive_encoder.js', 
+        flow_auto=False,
+        cf_interactive_auto: types.FunctionType = None,
+        managed_data=False,
+        **kwargs
+    ):
+        """
+        Turnstile flow_url part: 1713980851:1729499767:J-2EUfnJIDkf89j3D5flgXfV1SSZL6Pi8VXL6ISrhEE
+        """
+
+        if self.d is None:
+            self.d, self.b, self.cf_ray = parse_cf_params(
+                domain=self.domain, 
+                siteKey=self.siteKey,
+                client=self.client
+            )
+
+        cRay = self.d[33].split("'")[1]
+        cHash = self.d[34].split("'")[1]
+
+        if not flow_auto:
+            if managed_data:
+                flow_base = CF_Interactive.cf1_flow_data(self.d)
+                base_str = self.baseStr(flow_base)
+            else:
+                flow_base = CF_Interactive.cf1_flow_data(self.d, kwargs['p1'], kwargs['p2'])
+                base_str = self.baseStr(flow_base)
+        else:
+            flow_base = cf_interactive_auto(self.b, cRay, self.siteKey, kwargs['p1'], kwargs['p2'])
+            base_str = self.baseStr(flow_base)
+
+        _siteKey, wb_floats = self._get_sitekey_value() # _siteKey is not self.siteKe
+
+        result = subprocess.run(
+            ['node', encoder_path, base_str, _siteKey],
+            capture_output=True,
+            text=True
+        )
+        flow_token = result.stdout.strip()
+
+        data = {
+            f'v_{cRay}': flow_token
+        }
+        flow = self.clientRequest.post(
+            f'{self._domain_parsed}/cdn-cgi/challenge-platform/h/b/flow/ov1/{flow_url}/{cRay}/{cHash}',
+            data=data
+        )
+        print(flow, flow.text)
+
+    def solve_turnstile(self):
+        """
+        BETA
+        """
+        flow_data = self.parse_orchestrate_params(js=self.cf_orchestrate_js())
+        flow_url = flow_data['flow_url']
+        p1, p2 = flow_data['ass_param1'], flow_data['ass_param2']
+
+        # 1
+        self.solve_flow_ov1(
+            flow_url=flow_url,
+            p1=p1,
+            p2=p2
+        )
+
+        # 2
+        flow_data_auto = self.parse_orchestrate_params(js=self.cf_orchestrate_js(True))
+
+
     def cookie(self):
         wb, s_param, self.cf_ray = self.cf_cookie_parse()
         payload = {
@@ -163,3 +300,13 @@ class CF_Solver(CF_MetaData):
         )
         return jsd.cookies['cf_clearance']
 
+
+if __name__ == '__main__':
+    cf = CF_Solver(
+        'https://nopecha.com/demo/cloudflare',
+        siteKey='0x4AAAAAAAAjq6WYeRDKmebM'
+        #jsd_main='/cdn-cgi/challenge-platform/h/b/scripts/jsd/62ec4f065604/main.js',
+        #jsd_request='/cdn-cgi/challenge-platform/h/b/jsd/r'
+    )
+    cf.cf_orchestrate_js()
+    a = cf.solve_flow_ov1('')
