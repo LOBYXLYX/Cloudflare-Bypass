@@ -35,7 +35,7 @@ function g(i, j, o){
                 if ('AuoOZ' === 'fgyGc')
                     M['check_thirdparty']
                 else {
-                    if (256 > C.charCocdeAt(0)){
+                    if (256 > C.charCodeAt(0)){
                         for (
                             s = 0; s < F; H <<= 1,
                             I == j - 1 ? (I = 0, G.push(o(H)), H = 0) : I++, s++
@@ -52,7 +52,7 @@ function g(i, j, o){
                             j - 1 == I ? (I = 0, G.push(o(H)), H = 0) : I++, M = 0, s++
                         );
                     }
-                    D--, 0 == D  && (D = Math.pow(2, F), F++), delete B[C]
+                    D--, 0 == D && (D = Math.pow(2, F), F++), delete B[C]
                 }
             } else
                 for (
@@ -102,9 +102,9 @@ function g(i, j, o){
     );
     for (;;)
         if (H <<= 1, I == j - 1){
-            if ('DeWZd' !== 'DeWZd'){
+            if ('DeWZd' !== 'DeWZd')
                 G(J), C['qVQK0'] = !![];
-            } else {
+            else {
                 G.push(o(H));
                 break
             }

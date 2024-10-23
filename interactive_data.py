@@ -1,22 +1,19 @@
-"""
-Trying to bypass Cloudflare Captcha xd
-"""
-
 import json
 import httpx
 import random
 import time
+from datetime import datetime
 
 key = '0x4AAAAAAAAjq6WYeRDKmebM'
 
-def parse_cf_params(siteKey):
-    rep = httpx.get('https://nopecha.com/demo/cloudflare')
+def parse_cf_params(domain, siteKey, client=httpx.Client()):
+    rep = client.get(domain)
     d = rep.text.split(':')
     ray = rep.headers['CF-RAY'].split('-')[0]
     #for i,v in enumerate(d):
     #    print(i, v)
 
-    rep2 = httpx.get(f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/turnstile/if/ov2/av0/rcv0/0/auvka/{siteKey}/dark/fbE/normal/auto/')
+    rep2 = client.get(f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/turnstile/if/ov2/av0/rcv0/0/auvka/{siteKey}/dark/fbE/normal/auto/')
     b = rep2.text.split(': ')
     return d, b, ray
 
@@ -25,6 +22,15 @@ def repeat_func(value='window.frameElement', c=11):
     for i in range(c):
         _data.append(value)
     return _data
+
+
+CF_CHALLENGE_LANG = {
+    1: 'en-US',
+    2: ['es-US', 'es-419', 'es'],
+    3: ['en-MX'],
+    4: 'es-es'
+}
+
 
 class CF_Interactive:
     def cf1_flow_data(params, ass_param_name=None, ass_param_name2=None):
@@ -131,14 +137,16 @@ class CF_Interactive:
         }
         
     def cf3_flow_data(
-        params, 
+        params,
+        domain,
         cf_ray, 
         siteKey, 
         ass_param,
+        flow_url,
         is_this_a_key="62ec4f065604",
         user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
     ):
-        {
+        return {
             "1": {
                 "bXDBI2": "E2w2w77Cm8KhwrBK",
                 "kOrNV4": "yes",
@@ -1726,7 +1734,7 @@ class CF_Interactive:
                         "d.baseURI",
                     ],
                     "s": ["d.cookie"],
-                    "10/18/2024 12:27:08": ["d.lastModified"],
+                    datetime.now().strftime("%m/%d/%Y %H:%M:%S"): ["d.lastModified"],
                     "complete": ["d.readyState"],
                     "off": ["d.designMode"],
                     "hidden": ["d.visibilityState", "d.webkitVisibilityState"],
@@ -1853,7 +1861,7 @@ class CF_Interactive:
                 "skgtQ6": "",
                 "qLTl5": 6676,
                 "ErFO3": 3,
-                "CnwZO6": "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",
+                "CnwZO6": "MG0UAT0+" # big token
             },
             "12": {
                 "bXDBI2": "RWM3wqzCncKmw6cT",
@@ -1876,7 +1884,7 @@ class CF_Interactive:
                 "NQbg4": 5,
                 "ZEZUx0": 2431941447,
                 "dmbF6": 43,
-                "AiWH8": "https://nopecha.com/demo/cloudflare",
+                "AiWH8": domain if domain.split('/') > 3 else domain.split('/')[2],
                 "uFTL1": True,
             },
             "14": {
@@ -1885,10 +1893,10 @@ class CF_Interactive:
                 "skgtQ6": "",
                 "qLTl5": 433,
                 "ErFO3": 3,
-                "hyeG7": "es-US",
-                "CSsW0": ["es-US", "es-419", "es"],
-                "Xeobx7": ["es-MX"],
-                "fLWRO2": "es-es",
+                "hyeG7": CF_CHALLENGE_LANG[1],
+                "CSsW0": CF_CHALLENGE_LANG[2],
+                "Xeobx7": CF_CHALLENGE_LANG[3],
+                "fLWRO2": CF_CHALLENGE_LANG[4],
                 "PloT7": "diciembre, hora estándar de Colombia",
                 "ycPH4": "eo (Ucrania)",
                 "XLaQ2": "Bippity-boppity, Mumbo-jumbo u hocuspocus",
@@ -1906,7 +1914,7 @@ class CF_Interactive:
                     {"t": "lf"},
                     {
                         "t": "r",
-                        "dlt": 345.38499999046326,
+                        "dlt": random.uniform(100, 500),
                         "i": "link",
                         "n": "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/cmg/1/mSs%2F5lONlz8yLyl1SkqCnQaENIORJgsjDO0OHJ35zaA%3D",
                         "nh": "h3",
@@ -1915,9 +1923,9 @@ class CF_Interactive:
                     },
                     {
                         "t": "r",
-                        "dlt": 329.6399999856949,
+                        "dlt": random.uniform(100, 500),
                         "i": "script",
-                        "n": "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_api/v1?ray=8d4a3ca1a8cf0dd7&lang=auto",
+                        "n": f"https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_api/v1?ray={cf_ray}&lang=auto",
                         "nh": "h3",
                         "ts": 49303,
                         "bs": 49003,
@@ -1931,24 +1939,24 @@ class CF_Interactive:
                     {"t": "p", "i": "first-contentful-paint"},
                     {
                         "t": "r",
-                        "dlt": 556.1050000190735,
+                        "dlt": random.uniform(400, 1000),
                         "i": "xmlhttprequest",
-                        "n": "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/flow/ov1/83607295:1729269195:BM-SdIXuJxEKQGyEeAzWHd9N-V0YdPjgBsSxiXNpGTk/8d4a3ca1a8cf0dd7/473522d2134c68e",
+                        "n": flow_url,
                         "nh": "h3",
                         "ts": 116559,
                         "bs": 116259,
                     },
                     {"t": "lf"},
                     {"t": "lf"},
-                    {"t": "v", "s": 4478.399999976158, "d": 0},
-                    {"t": "v", "s": 12829.08999991417, "d": 0},
+                    {"t": "v", "s": random.uniform(1000, 4600), "d": 0},
+                    {"t": "v", "s": random.uniform(9500, 17000), "d": 0},
                     {"t": "lf"},
                     {"t": "lf"},
                     {"t": "lf"},
                     {"t": "lf"},
                     {"t": "lf"},
-                    {"t": "v", "s": 16043.52999997139, "d": 0},
-                    {"t": "v", "s": 30487.049999952316, "d": 0},
+                    {"t": "v", "s": random.uniform(10000, 30000), "d": 0},
+                    {"t": "v", "s": random.uniform(20000, 50000), "d": 0},
                     {"t": "lf"},
                     {"t": "lf"},
                     {"t": "m", "n": "cp-n-86252"},
@@ -2014,18 +2022,18 @@ class CF_Interactive:
             "kipPH4": 19,
             "LxrEk8": "0",
             "kAUw0": random.uniform(100, 400),
-            "lETW7": 340.06499993801117,
+            "lETW7": random.uniform(100, 500),
             "ZhtLK5": {
-                "ru": "aHR0cDovL2NoYWxsZW5nZXMuY2xvdWRmbGFyZS5jb20vY2RuLWNnaS9jaGFsbGVuZ2UtcGxhdGZvcm0vaC9iL3R1cm5zdGlsZS9pZi9vdjIvYXYwL3JjdjAvMC8zbWd0MC8weDRBQUFBQUFBQWpxNldZZVJES21lYk0vZGFyay9mYkUvbm9ybWFsL2F1dG8v",
-                "ra": "TW96aWxsYS81LjAgKExpbnV4OyBBbmRyb2lkIDEwOyBLKSBBcHBsZVdlYktpdC81MzcuMzYgKEtIVE1MLCBsaWtlIEdlY2tvKSBDaHJvbWUvMTI0LjAuMC4wIE1vYmlsZSBTYWZhcmkvNTM3LjM2",
-                "d": "Gl5LUBHd09/aR/4zZkUCqF/rGmgn74hwzLmZVOR5cz2rk2KihniAG7GV+L6tBktvW8QMfcKEenIGuHN2Zo/4XwVilRHXaM65c3ZCVj/xaPQcgN1fGVEjDSuquTJ64YcEeE08PyDm/dJn/rJKkXd7Yw8PhTzzVN/8EvyHIBsKvaKNPghEeHbkuqJNNwOfFhkuQHXE61udBoxEcDjiSYYzGSNUK4XzbZlu3r8SAKcSyZlX+BvoWR2t2p65O7RtEZJHeeBNxo+N5JG4wm8DYNrqxSCoShnWfzmMDGBPOYKlASZQYqL4CJkWfkas0DzTf2jR00CLlGQP2HQPeVMm1adYVRl1IYPqMETbX56OedTqzLv6GiT3fLYJuG6BSFmoT3ETVdgMt/5poaEkq2FOjm+/s4cSJdRrceCeiU0zgPQI5J+yQOnB4ZDToyGULteDCwr6KTs4i/3tFyeM2SkED/hv6wN0FKzjjn0i70+ZgKwog61xlP5iIymMQLfYi9deKME0duM9BmxFWWUqvlbOd0g2DxE5K/EYpJsTMySmEzoN3aVwZq3wwpFVE5VnPw04NXNGVxVL7JJp3a98VG39R/WwTZh9vBWa7o28trIMyfVU9AVoHq/8HQndvgiRFmud31AGlxaXz4Yb0TkZzJ7jPrV0DQ==",
-                "t": "MTcyOTI3MjQyMi42Nzg=",
-                "m": "5MCybZR8p2wItKxM6YVcCBUtHA1fw4smkzaSxrz90Ws=",
-                "i1": "r1ffIg7chzweoieFbEOrEA==",
-                "i2": "ddKqoHyjOP6FqCF+eHEKWA==",
-                "uh": "mSs/5lONlz8yLyl1SkqCnQaENIORJgsjDO0OHJ35zaA=",
-                "hh": "WCiLdNo2uN2aXsfJJhG2HFkP3bOo0fw8tsFAppLisvs=",
-                "zh": "9D+zbxCfwBPyr1pF5Wb5E9kRItcGU2xCgzO1zGTKToQ=",
+                "ru": params[27].split("'")[1],
+                "ra": params[28].split("'")[1],
+                "d": params[29].split("'")[1],
+                "t": params[30].split("'")[1],
+                "m": params[31].split("'")[1],
+                "i1": params[32].split("'")[1],
+                "i2": params[33].split("'")[1],
+                "uh": params[34].split("'")[1],
+                "hh": params[35].split("'")[1],
+                "zh": params[36].split("'")[1],
             },
             "PZKL0": {
                 "dYjR8": 0,
@@ -2045,10 +2053,10 @@ class CF_Interactive:
             "NrYV5": "3gAFo2l2Mbg2ekUvVWRzVkZtZVR1UXFsTzcwdzdRPT2jaXYyuDN5RXBQQXNwV2NCWmlvUGtqR2lkT3c9PaFk2gGYTWtWVGhuR0liT2dSVlFRV3JlaWw0WlRIWW5ZWGZHZ0RMVDNsZXZxako3Z0pudDAzeWE1UzdKOGJxV2F2ZjcwbjVNQ0JyNVRseWhJdnJkSU4rYjJwUjBuQUhLU2lHOGxNbHRseHREUzFjN01PbllLVmVobUs1NTdPeEVhRmtKQ1plNlZYQ3BLTmN2bVhUNER3MEloaVJmdGRVL2Y1cFhiSGxtUiszaHFvNkF2cUJCMmhVTloxTURCcnQrVTg0N3JXWXpMdmNoTDYrTTN1VGpGUkxET1dXbjBLblhFZHBpYi96V2o0RzB4MUJIcTNtMlJQWkdYMFNEV1hwdjA5RXByTUV1Ui93T3BqNElUMUtEU1QrTms3eFRhZmhUSFlYbitZREc3cGYzSTNFQWt2RWV1ZExleXdDWVhRS3JvU3ArK1RsMmJLUHlVUGpKd2hqbDNQNWR0bC9nd2tPY2UwSkJ0ZHBPWUU2U3lIRUJCcEg2c080MkRjQ3FZWXVIdStxN0xtZXlpNFJkRGZtVDRVVWhZNklaajdqUT09oW3ZLGRWZ1gxSUNxYjNwbEQvazdncDlIV09mMUFFOXVJZmlhRStwTTRPUmhVdTQ9oXS0TVRjeU9USTNNalF5TVM0ek5EZz0=",
             "RnkWM0": 0,
             "goWbN7": is_this_a_key,
-            "OKUJ7": "https://challenges.cloudflare.com/turnstile/v0/b/{is_this_a_key}/api.js?onload=DXjyL6&render=explicit",
-            "MBlJ0": "https://nopecha.com/demo/cloudflare",
-            "wueX2": "https://nopecha.com",
-            "itebZ1": "1/XeQ6RG8w05bCwEj2",
+            "OKUJ7": f"https://challenges.cloudflare.com/turnstile/v0/b/{is_this_a_key}/api.js?onload=DXjyL6&render=explicit",
+            "MBlJ0": domain if domain.split('/') > 3 else domain.split('/')[2],
+            "wueX2": domain if not domain.split('/') > 3 else domain.split('/')[2],
+            "itebZ1": params[10].split("'")[1],
             "cZmt6": random.uniform(2000, 5000),
             "RMiRU4": random.uniform(2000, 5000),
             "svKw7": 0,
@@ -2078,3 +2086,40 @@ class CF_Interactive:
             "FnNf4": repeat_func(c=5),
             "MEuBS5": 0,
         }
+
+    def cf4_manage_data(params):
+        return {
+            "xNpd8": "managed",
+            "Hskjy2": "3",
+            "FqEs8": 0,
+            "BMZf3": 0,
+            "HnLs7": random.uniform(100, 300),
+            "TjUO3": random.uniform(20, 100),
+            "cfwI0": 1,
+            "WaXp8": round(time.time()),
+            "MCtdU7": params[45].split('"')[1],
+            "fTbv6": {
+                "FtEcH8": 0,
+                "CbtNe8": 0,
+                "BDJXd0": 0,
+                "ggshp5": 0,
+                "RLjrX1": 0,
+                "RIuu2": 0,
+                "XVGU4": 0,
+                "DOJu7": 0
+            },
+            "oeCA8": False,
+            "UtEyu3": False,
+            "GadVZ5": "bGYfe3",
+            "WVBSW0": "",
+            "ffXus1": repeat_func(c=5),
+            "nWlT8": 0,
+            "kAWb2": "OjNxS4"
+        }
+
+if __name__ == '__main__':
+    a, b, r = parse_cf_params('https://nopecha.com/demo/cloudflare', key)
+    for i,v in enumerate(a):
+        print(i, v)
+
+    print(CF_Interactive.cf4_manage_data(a))

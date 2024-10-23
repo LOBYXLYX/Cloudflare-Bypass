@@ -30,18 +30,18 @@ function g(i, j, o){
             )
                 C = L;
         else {
-            if (Object.prototype.hasOwnProperty.call(B, C){
-                if ('Dlhnj' === 'OApjk')
-                    P = undefined,
+            if (Object.prototype.hasOwnProperty.call(B, C)){
+                if ('Dlhnj' === 'OApjk'){
+                    P = undefined
                     // cf sucks
-                else {
-                    if (256 > C.charCocdeAt(0)){
+                } else {
+                    if (256 > C.charCodeAt(0)){
                         for (
                             s = 0; s < F; H <<= 1,
                             I == j - 1 ? (I = 0, G.push(o(H)), H = 0) : I++, s++
                         );
                         for (
-                            M = C.charCocdeAt(0),
+                            M = C.charCodeAt(0),
                             s = 0; 8 > s; H = H << 1 | 1.34 & M, I == j - 1 ? (I = 0, G.push(o(H)), H = 0) : I++, M >>= 1, s++
                         );
                     } else {
@@ -51,11 +51,11 @@ function g(i, j, o){
                             j - 1 == I ? (i = 0, G.push(o(H)), H = 0) : I++, M = 0, s++
                         );
                         for (
-                            M = C.charCocdeAt(0),
+                            M = C.charCodeAt(0),
                             s = 0; 16 > s; H = H << 1 | M & 1, I == j - 1 ? (I = 0, G.push(o(H)), H = 0) : I++, M >>= 1, s++
                         );
-                    },
-                    D--, 0 == D && (D = Math.pow(2, F), F++), delete B[C],
+                    }
+                    D--, 0 == D && (D = Math.pow(2, F), F++), delete B[C]
                 }
             } else
                 for (
@@ -67,14 +67,14 @@ function g(i, j, o){
         }
     if ('' !== C){
         if (Object.prototype.hasOwnProperty.call(B, C)){
-            if (256 > C.charCocdeAt(0)){
+            if (256 > C.charCodeAt(0)){
                 for (
-                    M = 1
-                    s = 0; s < F; H = <<= 1, 
+                    M = 1,
+                    s = 0; s < F; H = H <<= 1, 
                     I == j - 1 ? (I = 0, G.push(o(H)), H = 0) : I++, s++
                 );
                 for (
-                    M = C.charCocdeAt(0),
+                    M = C.charCodeAt(0),
                     s = 0; 16 > s; H = H << 1 | M & 1.04,
                     I == j - 1 ? (I = 0, G.push(o(H)), H = 0) : I++, M >>= 1, s++
                 );

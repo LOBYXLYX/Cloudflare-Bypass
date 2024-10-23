@@ -1,8 +1,10 @@
 import time
+import sys
 import types
 import json
 import httpx
 import typing
+import random
 import requests as cf_captcha_req
 import subprocess
 
@@ -34,8 +36,9 @@ class CF_MetaData:
 
     def _get_sitekey_value(self) -> tuple[str, str]:
         r = self.clientRequest.get(self.domain + self.jsd_main_url, follow_redirects=True).text
-        spli1 = r.split("ah='")[1].split(',')      
-        func_g = r.split("'g'")[1].split("},'")[0].split('1.')
+        spli1 = r.split("ah='")[1].split(',')
+
+        func_g = r.split("'g'")[2].split("},'")[0].split('1.')
 
         wb_float_gens = ''
 
@@ -48,6 +51,9 @@ class CF_MetaData:
 
                 parsed_length = 4 if v[:4].split('|')[1].isnumeric() else 5
                 wb_float_gens += '1.' + v[:parsed_length].split('|')[1] + ','
+
+        while not len(wb_float_gens.split(',')) > 8:
+            wb_float_gens += str(round(random.uniform(1, 1.99), random.randint(1, 2))) + ','
 
         wb_float_gens = wb_float_gens[:len(wb_float_gens) - 1]
 
@@ -109,17 +115,35 @@ class CF_MetaData:
 
     def parse_orchestrate_params(self, js) -> dict[str, typing.Union[str, None]]:
         flow_data = {
-            'cf_flow_url': None,
+            'flow_url': None,
             'ass_param1': 'AgLK2',
-            'ass_param2': 'MEuBS5'
+            'ass_param2': 'MEuBS5',
+            'turnstile_siteKey': None,
+            'onload_token': None,
         }
 
         for i,v in enumerate(js.split('~/')):
             if len(v.split(':')) > 2:
                 js2 = v.split('/~')
                 for s in js2:
-                    if str(round(time.time()))[:4] in s and len(s.split(':')) == 3:
-                        flow_data['cf_flow_url'] = s
+                    if str(round(time.time()))[:5] in s and len(s.split(':')) == 3:
+                        flow_data['flow_url'] = s
+
+        for i,v in enumerate(js.split("='")):
+            print(v)
+            if len(v.split('~')) > 500:
+                for code in v.split('~'):
+                    print(len(code), code)
+                    if len(code) == 65:
+                        flow_data['turnstile_siteKey'] = code
+
+                    if len(code) == 50 and 'explicit' in code:
+                        flow_data['onload_token'] = code.split('onload=')[1].split('&')[0]
+
+        #for i,v in enumerate(js.split('](setTimeout,')):
+        #    print(i, v, '\n')
+        #    if len(v.split(':')) > 16 and len(v.split(':')) < 21: #and ('eM' in v and '.md' in v):
+        #        print(v)
 
         #for i,v in enumerate(js.split("='")):
         #    if len(v.split('~')) > 1000:
@@ -220,6 +244,7 @@ class CF_Solver(CF_MetaData):
     def solve_flow_ov1(
         self, 
         flow_url,
+        siteKeyT,
         encoder_path='interactive_encoder.js', 
         flow_auto=False,
         cf_interactive_auto: types.FunctionType = None,
@@ -237,8 +262,12 @@ class CF_Solver(CF_MetaData):
                 client=self.client
             )
 
+        #print(self.d)
+
         cRay = self.d[33].split("'")[1]
         cHash = self.d[34].split("'")[1]
+        cH = self.d[35].split("'")[1]
+        print(cRay, cHash, cH)
 
         if not flow_auto:
             if managed_data:
@@ -251,23 +280,25 @@ class CF_Solver(CF_MetaData):
             flow_base = cf_interactive_auto(self.b, cRay, self.siteKey, kwargs['p1'], kwargs['p2'])
             base_str = self.baseStr(flow_base)
 
-        _siteKey, wb_floats = self._get_sitekey_value() # _siteKey is not self.siteKe
+        print(base_str, siteKeyT)
 
         result = subprocess.run(
-            ['node', encoder_path, base_str, _siteKey],
+            ['node', encoder_path, base_str, siteKeyT],
             capture_output=True,
             text=True
         )
         flow_token = result.stdout.strip()
+        print(flow_token)
+        sys.exit()
 
         data = {
             f'v_{cRay}': flow_token
         }
-        flow = self.clientRequest.post(
+        flow = self.client.post(
             f'{self._domain_parsed}/cdn-cgi/challenge-platform/h/b/flow/ov1/{flow_url}/{cRay}/{cHash}',
             data=data
         )
-        print(flow, flow.text)
+        print('cf', flow, flow.text)
 
     def solve_turnstile(self):
         """
@@ -276,13 +307,17 @@ class CF_Solver(CF_MetaData):
         flow_data = self.parse_orchestrate_params(js=self.cf_orchestrate_js())
         flow_url = flow_data['flow_url']
         p1, p2 = flow_data['ass_param1'], flow_data['ass_param2']
+        _siteKey = flow_data['turnstile_siteKey']
+        print(flow_data, flow_url, p1, p2, _siteKey)
 
         # 1
         self.solve_flow_ov1(
             flow_url=flow_url,
+            siteKeyT=_siteKey,
             p1=p1,
             p2=p2
         )
+        sys.exit()
 
         # 2
         flow_data_auto = self.parse_orchestrate_params(js=self.cf_orchestrate_js(True))
@@ -308,5 +343,4 @@ if __name__ == '__main__':
         #jsd_main='/cdn-cgi/challenge-platform/h/b/scripts/jsd/62ec4f065604/main.js',
         #jsd_request='/cdn-cgi/challenge-platform/h/b/jsd/r'
     )
-    cf.cf_orchestrate_js()
-    a = cf.solve_flow_ov1('')
+    cf.solve_turnstile()
