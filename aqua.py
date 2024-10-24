@@ -38,7 +38,15 @@ class CF_MetaData:
         r = self.clientRequest.get(self.domain + self.jsd_main_url, follow_redirects=True).text
         spli1 = r.split("ah='")[1].split(',')
 
-        func_g = r.split("'g'")[2].split("},'")[0].split('1.')
+        # search index
+        def _func_g_index():
+            func_g = r.split("'g'")
+
+            for i,func in enumerate(func_g):
+                if len(func) > 1800:
+                    return i
+
+        func_g = r.split("'g'")[_func_g_index()].split("},'")[0].split('1.')
 
         wb_float_gens = ''
 
