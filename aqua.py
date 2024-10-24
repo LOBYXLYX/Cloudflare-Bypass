@@ -3,9 +3,9 @@ import sys
 import types
 import json
 import httpx
+import execjs
 import typing
 import random
-import requests as cf_captcha_req
 import subprocess
 
 from dataclasses import dataclass
@@ -14,11 +14,11 @@ from interactive_data import parse_cf_params, CF_Interactive
 
 @dataclass
 class CF_MetaData:
-    domain: str
-    clientRequest: typing.Union[typing.Any, httpx.Client]
-    userAgent: typing.Optional[str]
+    domain: str = None
+    clientRequest: typing.Union[typing.Any, httpx.Client] = None
+    userAgent: typing.Optional[str] = None
 
-    jsd_main_url: str
+    jsd_main_url: str = None
     _domain_parsed: typing.Optional[str] = None
 
     def _get_s_parameter(self) -> tuple[typing.Optional[str], str]:
@@ -91,6 +91,7 @@ class CF_MetaData:
         )
 
         wb = result.stdout.strip()
+        print(wb)
         s, cf_ray = self._get_s_parameter()
         return wb, s, cf_ray
 
@@ -128,6 +129,7 @@ class CF_MetaData:
             'ass_param2': 'MEuBS5',
             'turnstile_siteKey': None,
             'onload_token': None,
+            'really_a_key': None
         }
 
         for i,v in enumerate(js.split('~/')):
@@ -145,18 +147,104 @@ class CF_MetaData:
                     if len(code) == 65:
                         flow_data['turnstile_siteKey'] = code
 
-                    if len(code) == 50 and 'explicit' in code:
+                    if len(code) in [49, 50] and 'explicit' in code:
                         flow_data['onload_token'] = code.split('onload=')[1].split('&')[0]
+                        flow_data['really_a_key'] = code.split('/')[1]
 
         #for i,v in enumerate(js.split('](setTimeout,')):
         #    print(i, v, '\n')
-        #    if len(v.split(':')) > 16 and len(v.split(':')) < 21: #and ('eM' in v and '.md' in v):
-        #        print(v)
-
-        #for i,v in enumerate(js.split("='")):
-        #    if len(v.split('~')) > 1000:
-        #        storaged_c
+        print(flow_data)
         return flow_data
+
+    def parse_challenge_auto(self, siteKey) -> tuple[list[str], str]:
+        cf_reversed_js = execjs.compile(open('cf_reversed_funcs.js', 'r').read())
+        l = cf_reversed_js.call('l')
+        ov2_t_url = f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/turnstile/if/ov2/av0/rcv0/0/{l}/{siteKey}/dark/fbE/normal/auto/'
+
+        ca = self.clientRequest.get(ov2_t_url).text
+        chl_opt = ca.split('window._cf_chl_opt={')[1].split(':')
+
+        for i,v in enumerate(chl_opt):
+            print(i, v)
+        return chl_opt, ov2_t_url
+
+class CF_TurnstileBase(CF_MetaData):
+    def __init__(
+        self,
+        *,
+        clientRequest: typing.Union[typing.Any, httpx.Client],
+        encoder_path: str = 'interactive_encoder.js',
+        flow_auto: bool = False,
+        cf_interactive_func: types.FunctionType = None,
+    ):
+        self.encoder_path = encoder_path
+        self.flow_auto = flow_auto
+        self.cf_interactive = cf_interactive_func
+        self.client = clientRequest
+
+        self.cRay: typing.Optional[str] = None
+
+        super().__init__(
+            clientRequest=self.client,
+            jsd_main='/cdn-cgi/challenge-platform/scripts/jsd/main.js'
+        )
+
+        self.baseStr = lambda base_dict: json.dumps(base_dict, separators=(',', ':'))
+        self.d, self.b, self.cf_ray = parse_cf_params(
+            domain=self.domain,
+            siteKey=self.siteKey,
+            client=self.client
+        )
+        self.find_value = lambda index: self.d[index].split("'")[1]
+
+    def parse_cf_orchestrate(self, auto=False) -> dict[str, typing.Union[str, None]]:
+        data = self.parse_orchestrate_params(js=self.cf_orchestrate_js(auto))
+        return data
+
+    def build_cf_base(self, **kwargs) -> str:
+        if not self.flow_auto:
+            base_str = self.baseStr(self.cf_interactive_func(**kwargs))
+        else:
+            base_str = self.baseStr(self.cf_interactive_func(self.d, **kwargs))
+        return base_str
+
+    def build_flow_ov1(self, *args):
+        return self.cRay + ('/'.join(url_path for url_path in args))
+
+    def solve_flow_ov1(
+        self, 
+        flow_url: str, 
+        siteKey: str, 
+        headers: dict[str, str],
+        *args: tuple, 
+        **kwargs: dict, 
+    ):
+        base_interactive = self.build_cf_base(**kwargs)
+
+        result = subprocess.run(
+            ['node', self.encoder_path, base_interactive, siteKey],
+            capture_output=True,
+            text=True
+        )
+        flow_token = result.stdout
+
+        self.cRay = self.find_value(33)
+
+        rest_flow_url = self.built_flow_ov1(*args)
+        data = {
+            f'v_{cRay}': flow_token
+        }
+        self.client.headers.update({
+            'cf-challenge': list(args)[0], # xd
+            'content-length': str(len(json.dumps(data))),
+            'content-type': 'application/x-www-form-urlencoded',
+            **headers
+        })
+        solve = self.client.post(
+            f'{self._domain_parsed}/cdn-cgi/challenge-platform/h/b/flow/ov1/{flow_url}/{rest_flow_url}',
+            data=data
+        )
+
 
 class CF_Solver(CF_MetaData):
     """
@@ -231,9 +319,6 @@ class CF_Solver(CF_MetaData):
             )
 
         self.cf_ray: typing.Optional[str] = None
-        self.baseStr = lambda base_dict: json.dumps(base_dict, separators=(',', ':'))
-        self.d: typing.Optional[str] = None
-        self.b: typing.Optional[str] = None
 
         super().__init__(
             domain=self.domain,
@@ -249,86 +334,63 @@ class CF_Solver(CF_MetaData):
             else:
                 return 'https://' + self.proxy_obj
 
-    def solve_flow_ov1(
-        self, 
-        flow_url,
-        siteKeyT,
-        encoder_path='interactive_encoder.js', 
-        flow_auto=False,
-        cf_interactive_auto: types.FunctionType = None,
-        managed_data=False,
-        **kwargs
-    ):
-        """
-        Turnstile flow_url part: 1713980851:1729499767:J-2EUfnJIDkf89j3D5flgXfV1SSZL6Pi8VXL6ISrhEE
-        """
-
-        if self.d is None:
-            self.d, self.b, self.cf_ray = parse_cf_params(
-                domain=self.domain, 
-                siteKey=self.siteKey,
-                client=self.client
-            )
-
-        #print(self.d)
-
-        cRay = self.d[33].split("'")[1]
-        cHash = self.d[34].split("'")[1]
-        cH = self.d[35].split("'")[1]
-        print(cRay, cHash, cH)
-
-        if not flow_auto:
-            if managed_data:
-                flow_base = CF_Interactive.cf1_flow_data(self.d)
-                base_str = self.baseStr(flow_base)
-            else:
-                flow_base = CF_Interactive.cf1_flow_data(self.d, kwargs['p1'], kwargs['p2'])
-                base_str = self.baseStr(flow_base)
-        else:
-            flow_base = cf_interactive_auto(self.b, cRay, self.siteKey, kwargs['p1'], kwargs['p2'])
-            base_str = self.baseStr(flow_base)
-
-        print(base_str, siteKeyT)
-
-        result = subprocess.run(
-            ['node', encoder_path, base_str, siteKeyT],
-            capture_output=True,
-            text=True
-        )
-        flow_token = result.stdout.strip()
-        print(flow_token)
-        sys.exit()
-
-        data = {
-            f'v_{cRay}': flow_token
-        }
-        flow = self.client.post(
-            f'{self._domain_parsed}/cdn-cgi/challenge-platform/h/b/flow/ov1/{flow_url}/{cRay}/{cHash}',
-            data=data
-        )
-        print('cf', flow, flow.text)
-
     def solve_turnstile(self):
         """
         BETA
         """
-        flow_data = self.parse_orchestrate_params(js=self.cf_orchestrate_js())
-        flow_url = flow_data['flow_url']
-        p1, p2 = flow_data['ass_param1'], flow_data['ass_param2']
-        _siteKey = flow_data['turnstile_siteKey']
-        print(flow_data, flow_url, p1, p2, _siteKey)
-
-        # 1
-        self.solve_flow_ov1(
-            flow_url=flow_url,
-            siteKeyT=_siteKey,
-            p1=p1,
-            p2=p2
-        )
+        CF_MetaData.domain = self.domain
+        CF_MetaData.userAgent = self.userAgent
         sys.exit()
 
-        # 2
-        flow_data_auto = self.parse_orchestrate_params(js=self.cf_orchestrate_js(True))
+        # 1 ============================================
+        cf_turn1 = CF_TurnstileBase(
+            clientRequest=self.client,
+            cf_interactive_func=CF_interactive.cf1_flow_data
+        )
+        flow_data = cf_turn1.parse_orchestrate_js()
+
+        cf_turn1.solve_flow_ov1(
+            flow_data['flow_url'],
+            flow_data['turnstile_siteKey'],
+            {}, # <= headers
+            cf_turn1.find_value(35), # <= cf-challege value
+            # interactive func params
+            params=cf_turn1.d,
+            ass_param_name=flow_data['ass_param1'],
+            ass_param_name2=flow_data['ass_param2']
+        )
+
+        # 2 =============================================
+        cf_turn2 = CF_TurnstileBase(
+            clientRequest=self.client,
+            encoder_path='chl_api_encoder.js',
+            cf_interactive_func=CF_interactive.cf2_flow_data
+        )
+        flow_data_auto = cf_turn2.parse_orchestrate_js(True)
+
+        cf_turn2.solve_flow_ov1(
+            flow_data_auto['flow_url'],
+            flow_data_auto['turnstile_siteKey'],
+            {
+                'origin': 'https://challenges.cloudflare.com',
+                'referer': ''
+            }, # <= headers,
+            cf_turn1.find_value(35),
+            # interactive func params
+            params=cf_turn1.d,
+            cf_ray=self.cf_ray,
+            siteKey=self.siteKey,
+            ass_param=flow_data_auto['ass_param1'],
+            ass_param2=flow_data_auto['ass_param1'],
+            is_this_a_key=flow_data_auto['really_a_key']
+        )
+
+        # 3 ============================================
+        cf_turn3 = CF_TurnstileBase(
+            clientRequest=self.client,
+            encoder_path='chl_api_m_encoder.js', # not created yet
+            cf_interactive_func=CF_interactive.cf3_flow_data
+        )
 
 
     def cookie(self):
