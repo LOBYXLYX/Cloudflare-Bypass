@@ -276,13 +276,6 @@ class CF_Solver(CF_MetaData):
             )
             cookie = cf.cookie() # return cf_clearance cookie
 
-        - code 4 (turnstile solver):
-            cf = CF_Solver(
-                'https://nopecha.com/demo/cloudflare',
-                siteKey='0x4AAAAAAAAjq6WYeRDKmebM'
-            )
-            solved = cf.solve_turnstile()
-
     """
 
     def __init__(
