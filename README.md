@@ -11,6 +11,12 @@ print(cookie)
 cf = CF_Solver('https://tempail.com')
 cookie2 = cf.cookie()
 print(cookie2)
+
+
+# follow up requests
+response = cf.client.get(url=url, timeout=10)
+response = cf.client.post(url=url, data=data, json=json, timeout=10)
+
 ```
 
 discord: lyxz2
