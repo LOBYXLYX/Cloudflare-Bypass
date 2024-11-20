@@ -1,3 +1,9 @@
+# Requirements
+```
+pip install javascript
+```
+
+# Example
 ```python
 from aqua import CF_Solver
 
