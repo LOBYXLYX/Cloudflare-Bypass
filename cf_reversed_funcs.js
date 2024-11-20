@@ -1,6 +1,6 @@
 
 
-const y = {
+const ly = {
     widgetMap: new Map
 };
 
@@ -41,6 +41,41 @@ function h(func) {
             n['innerHTML' ] = 'challenge_running'
         })
 }
+//@
+var o = {
+    "object": "o",
+    "string": "s",
+    "undefined": "u",
+    "symbol": "z",
+    "number": "n",
+    "bigint": "I",
+    "boolean": "b"
+}
+function y(c) {
+    for (
+        d = []; null !== c; d = d.concat(Object.keys(c)),
+        c = Object.getPrototypeOf(c)
+    );
+    return d
+}
+function s(c, d) {
+    return d instanceof c.Function && 0 < c.Function.prototype.toString.call(d).indexOf('[native code]')
+}
+function v(e, D, E) {
+    try {
+        return D[E].catch(function() {}), 'p'
+    } catch (err) {}
+    try {
+        if (D[E] === null)
+            return void 0 === D[E] ? 'u' : 'x'
+    } catch (err) {
+        return 'i'
+    }
+    return e.Array.isArray(D[E]) ? 'a' : D[E] === e.Array ? 'C' : !0 === D[E] ? 'T' : !1 === D[E] ? 'F' : (F = typeof D[E],
+    'function' === F ? s(e, D[E]) ? 'N' : 'f' : o[F] || '?')
+}
+//$
+
 //+
 
 function perfom() {
@@ -117,7 +152,7 @@ function l() {
         t = "";
         for (var d = 0; d < 5; d++)
             t += a.charAt(Math.floor(Math.random() * i))
-    } while (y.widgetMap.has(t));
+    } while (ly.widgetMap.has(t));
     return t
 };
 

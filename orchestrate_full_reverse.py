@@ -22,9 +22,18 @@ class VM_Automation:
         self.userAgent = userAgent
         self.resource_loader = jsdom.ResourceLoader({'userAgent': self.userAgent})
         self.dom_context = None
-
-        self.content_type = 'text/html'
         self.ov1_contentType = 'application/x-www-form-urlencoded'
+
+        self.dom_context = jsdom.JSDOM('', {
+            'url': self.domain,
+            'referrer': self.domain + '/',
+            'contentType': 'text/html',
+            'includeNodeLocations': True,
+            'pretendToBeVisual': True,
+            'storageQuota': 10000000,
+            'runScripts': 'dangerously',
+            'resources': self.resource_loader
+        }).getInternalVMContext()
 
     def get_reversed_func(self, func_name='h'):
         with open('cf_reversed_funcs.js', 'r') as f:
@@ -32,20 +41,11 @@ class VM_Automation:
 
         if func_name == 'h':
             return code.split('//-')[1].split('//+')[0]
+        elif func_name == 'iden':
+            return code.split('//@')[1].split('//$')[0]
 
     def send_ov1_request(self, flowUrl, flowToken, cfChallenge, cfRay):
-        if self.dom_context is None:
-            self.dom_context = jsdom.JSDOM('', {
-                'url': self.domain,
-                'contentType': self.content_type,
-                'includeNodeLocations': True,
-                'pretendToBeVisual': True,
-                'storageQuota': 10000000,
-                'runScripts': 'dangerously',
-                'resources': self.resource_loader
-            }).getInternalVMContext()
-            
-            self.dom_context.XMLHttpRequest = xml_lib.XMLHttpRequest
+        self.dom_context.XMLHttpRequest = xml_lib.XMLHttpRequest
 
         vm.Script(self.get_reversed_func()).runInContext(self.dom_context)
         print(f'(v_{cfRay}) challenge encrypted:', flowToken[:70]+'....')
@@ -132,7 +132,60 @@ class VM_Automation:
         vm.Script(codee).runInThisContext()
         result = vm.Script('b(Number(NUMBER))'.replace('NUMBER', str(number))).runInThisContext()
         return result
-        
+
+    def reverse_website_identifier(self) -> dict[typing.Union[int, str], typing.Any]:
+        vm.Script(self.get_reversed_func('iden')).runInContext(self.dom_context)
+        vm.Script('''
+        function ffEge(D, E, F, G) {
+            if (E === null || E === void 0)
+                return G;
+            
+            for (
+                I = y(E),
+                D.Object.getOwnPropertyNames && (I = I.concat(Object.getOwnPropertyNames(E))),
+                I = D.Array.from && D.set ? D.Array.set(new D.Set(I)) : function(O, a5, P) {
+                    for (
+                        O.sort(),
+                        P = 0; P < O.length; O[P] === O[P + 1] ? O.splice(P + 1, 1) : P += 1
+                    );
+                    return O
+                }(I),
+                J = 'nAsAaAb'.split('A'),
+                J = J.includes.bind(J),
+                K = 0; K < I.length; L = I[K],
+                M = v(D, E, L),
+                J(M) ? (N = M === 's' && !D.isNaN(E[L]),
+                'd.cookie' === F + L ? H(F + L, M) : N || H(F + L, E[L])) : H(F + L, M), K++
+            );
+            return G;
+            function H(O, P) {
+                Object.prototype.hasOwnProperty.call(G, P) || (G[P] = []),
+                G[P].push(O)
+            }
+        }
+        function B(){
+            try {
+                return f = window.document.createElement('iframe'),
+                f.style = 'display: none',
+                f.tabIndex = '-1',
+                window.document.body.appendChild(f),
+                D = f.contentWindow,
+                E = {},
+                E = ffEge(D, D, '', E),
+                E = ffEge(D, D.clientInformation || D.navigator, 'n.', E),
+                E = ffEge(D, D.contentDocument, 'd.', E),
+                window.document.body.removeChild(f),
+                F = {},
+                F.r = E,
+                F.e = null,
+                F
+            } catch(err) {
+                return G = {}, G.r = {}, G.e = err, G
+            }
+        }
+        ''').runInContext(self.dom_context)
+        result = json.loads(vm.Script('B()').runInContext(self.dom_context))
+        return result
 
 class OrchestrateJS:
     """
@@ -275,6 +328,7 @@ class OrchestrateJS:
             lp = self.find_obf_value(_value)
 
             self.flow_data['unknown_array'][lp] = 0
+            print(_value, lp)
 
     def intauto_values(self) -> dict[str, str]:
         def _find_index(js):
