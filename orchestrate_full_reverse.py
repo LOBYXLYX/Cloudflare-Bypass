@@ -16,13 +16,6 @@ xml_lib = require('xmlhttprequest')
 PATH = 'cloudflare-data/orchestrate.json'
 reversed_funcs = execjs.compile(open('cf_reversed_funcs.js', 'r').read())
 
-class CodeFinder:
-    def c_variable(js):
-        for i,v in enumerate(js.split("setTimeout,")):
-            if 'gF,c={' in v:
-                c = v.split('gF,c={')[1]
-        return c
-
 class VM_Automation:
     def __init__(self, domain, userAgent):
         self.domain = domain
@@ -41,7 +34,6 @@ class VM_Automation:
             return code.split('//-')[1].split('//+')[0]
 
     def send_ov1_request(self, flowUrl, flowToken, cfChallenge, cfRay):
-        print(flowUrl)
         if self.dom_context is None:
             self.dom_context = jsdom.JSDOM('', {
                 'url': self.domain,
@@ -56,14 +48,12 @@ class VM_Automation:
             self.dom_context.XMLHttpRequest = xml_lib.XMLHttpRequest
 
         vm.Script(self.get_reversed_func()).runInContext(self.dom_context)
+        print(f'(v_{cfRay}) challenge encrypted:', flowToken[:70]+'....')
     
         vm.Script('''
         function cfrequest(flow, encryptedToken, challengeToken, cfRay) {
             return new Promise((resolve, reject) => {
                 x = new window.XMLHttpRequest(),
-                console.log(x),
-                console.log(flow),
-
                 x.open('POST', flow, true),
                 x.timeout = 2500 * (1 + 0),
                 x.ontimeout = function(){
@@ -80,15 +70,13 @@ class VM_Automation:
                 x.onload = function() {
                     resolve(x.status);
                 },
-                console.log(flow),
-                console.log(`v_${cfRay}=${encryptedToken}`),
                 x.send(`v_${cfRay}=${encryptedToken}`)
             });
         }
         async function wait(u, e, c, r) {
             try {
                 const status = await cfrequest(u, e, c, r);
-                console.log(status);
+                console.log(`(${u}) ov1_status_code:`, status);
             } catch(err) {
                 console.log(err)
             }
@@ -104,9 +92,7 @@ class VM_Automation:
         codee = '''
         for (
             gF = b,
-            console.log('before'),
             (function (c, d, gE, e, f) {
-                console.log('before 2', c, d)
                 for (gE = b, e = c(); !![]; )
                     try {
                         if (
@@ -125,7 +111,6 @@ class VM_Automation:
         function b(c, d, e) {
             return (
                 (e = a()),
-                //console.log(e),
                 (b = function (f, g, h) {
                     return (f = f - FF_LESS), (h = e[f]), h;
                 }),
@@ -138,17 +123,15 @@ class VM_Automation:
                     "~"
                 )),
                 (a = function () {
-                    //console.log(jE);
                     return jE;
                 }),
                 a()
             );
         }
         '''.replace('INT_GEN', parseint_gen).replace('FF_LESS', str(f_less)).replace('OBFUSC_CODE', obf_code).replace('OBFUSC_NUMBER', str(obf_number)).replace('PARENTESI', parentesis)
-        print(codee)
         vm.Script(codee).runInThisContext()
         result = vm.Script('b(Number(NUMBER))'.replace('NUMBER', str(number))).runInThisContext()
-        print(result)
+        return result
         
 
 class OrchestrateJS:
@@ -160,25 +143,30 @@ class OrchestrateJS:
         self.is_flow_auto = auto_mode
         self.flow_data = {
             'flow_url': None,
-            'ass_param1': self._random_string(6),
-            'ass_param2': self._random_string(random.randint(5, 6)),
+            'ass_param1': None,
+            'ass_param2': None,
             'turnstile_siteKey': None,
             'onload_token': None,
-            'really_a_key': None
+            'really_a_key': None,
+            'unknown_array': {}
         }
         self._all_int_values: list[int] = []
         self.f_less: typing.Optional[int] = None
         
         self.interactive_data: typing.Any = None
         self.interactive_keys: list[str] = []
-        self.interactive_values: list[int] = []
+
+        #self.inter_values1: list[int] = []
+        self.inter_values: list[str] = [] # confused values
+
         self.obf_number: int = None
         self.parseInt: str = None
         self.double_parentesis: str = ''
+        self.obf_letters = 'ertyuiopsdfghjklzxcvnm'
 
     def parse_js_storaged_code(self) -> str:
         for i,v in enumerate(self.js.split('function a(')):
-            if v[:2].isalpha() and v[2:3] == ')' and len(v.split('~')) > 500:
+            if v[:1].isalpha() and v[2:3] == ')' and len(v.split('~')) > 500:
                 variable = v[:2]
                 d = v.split(f"return {variable}='")[1].split('.split(')[0]
 
@@ -197,15 +185,10 @@ class OrchestrateJS:
             data = json.load(f)
         return data.get(key, None)
 
-    def _random_string(self, length) -> str:
-        return ''.join([random.choice(string.ascii_letters + string.digits) for i in range(length)])
-
-    def _find_int_value(self, number) -> str:
+    def find_obf_value(self, number) -> str:
         jp = self.parse_js_storaged_code()
-        print(jp)
-        print(self.f_less, number, self.obf_number, type(jp))
 
-        VM_Automation.analyze_obf(
+        find_string = VM_Automation.analyze_obf(
             number=number, 
             f_less=self.f_less, 
             obf_code=jp, 
@@ -213,7 +196,7 @@ class OrchestrateJS:
             parseint_gen=self.parseInt,
             parentesis=self.double_parentesis
         )
-        return find_n
+        return find_string
 
     def get_encrypter_floats(self) -> str:
         g_func = None
@@ -222,7 +205,6 @@ class OrchestrateJS:
         for i,v in enumerate(self.js.split("'g':function(")):
             if len(v[:35].split(',')) > 15 and 'Object[' in v:
                 g_func = v.split("('')},'")[0].split('1.')
-                print(v.split("('')},'")[0])
 
         # wb method
         for i, v in enumerate(g_func):
@@ -236,22 +218,63 @@ class OrchestrateJS:
                 encrypter_floats_gens += '1.' + v[:parsed_length].split('|')[1] + ',' 
         while not len(encrypter_floats_gens.split(',')) > 6:
             encrypter_floats_gens += str(round(random.uniform(1, 1.99), random.randint(1, 2))) + ','
-        #print('Encryptor Floats:', encrypter_floats_gens)
+        #print('cloudflare floats:', encrypter_floats_gens)
         return encrypter_floats_gens[:len(encrypter_floats_gens) - 1]
 
-    def complete_interactive_data(self, I_IntValues) -> None:
-        for _value in I_IntValues:
-            if '(' in _value:
-                s = _value.split('(')
-                for f in s:
-                    if f[:1].isnumeric():
-                        self._all_int_values.append(int(f.split(')')[0]))
+    def complete_interactive_data(self, I_IntValues, unknown_values) -> None:
+        if not self.is_flow_auto:
+            for _value in I_IntValues:
+                if '(' in _value:
+                    s = _value.split('(')
+                    for f in s:
+                        if f[:1].isnumeric():
+                            if '1e3' in f:
+                                f = f.replace('1e3', '1000')
 
-        self.interactive_values.append(self._all_int_values[len(self._all_int_values)-1])
-        self.interactive_values.append(self._all_int_values[len(self._all_int_values)-3])
-        print(self.interactive_values)
+                            self._all_int_values.append(int(f.split(')')[0]))
 
-        self._find_int_value(self.interactive_values[1])
+            blud_v1 = self._all_int_values[len(self._all_int_values) -1]
+            blud_v2 = self._all_int_values[len(self._all_int_values) -3]
+
+            mybro_v1 = I_IntValues[len(I_IntValues) -1]
+            mybro_v2 = I_IntValues[len(I_IntValues) -5]
+        else:
+            mybro_v1 = I_IntValues[12]
+            mybro_v2 = I_IntValues[16]
+
+            blud_v1 = int(mybro_v1.split('(')[1].split(')')[0])
+            blud_v2 = int(mybro_v2.split('(')[1].split(')')[0])
+
+        def _find_object_value(value) -> str:
+            for i,v in enumerate(self.js.split(value)):
+                if v[:2] == "':":
+                    fvalue = v[:20].split("),'")[0].split('(')[1]
+            
+            return self.find_obf_value(fvalue)
+
+        def _object_type(_obj) -> typing.Any:
+            if ('[' in _obj and ']' in _obj) and '(' in _obj:
+                return []
+            elif ('(' in _obj and ')' in _obj) and '[' not in _obj:
+                return ''
+
+        p = self.find_obf_value(blud_v1)
+        l = self.find_obf_value(blud_v2)
+
+        if isinstance(_object_type(mybro_v1), str):
+            self.flow_data['ass_param1'] = p
+        else:
+            self.flow_data['ass_param1'] = _find_object_value(p)
+
+        if isinstance(_object_type(mybro_v2), str):
+            self.flow_data['ass_param2'] = l
+        else:
+            self.flow_data['ass_param2'] = _find_object_value(l)
+
+        for _value in unknown_values:
+            lp = self.find_obf_value(_value)
+
+            self.flow_data['unknown_array'][lp] = 0
 
     def intauto_values(self) -> dict[str, str]:
         def _find_index(js):
@@ -267,7 +290,7 @@ class OrchestrateJS:
             elif ')})' in dk:
                 dk = dk.split(')})')[0] + ')}'
         else:
-            dk = self.js.split('setTimeout,')[_find_index(self.js.split('setTimeout,'))].split('100,g,')[1][:445]
+            dk = self.js.split('setTimeout,')[_find_index(self.js.split('setTimeout,'))].split('100,g,')[1][:455]
             if ']})' in dk:
                 dk = dk.split(']})')[0] + ']}'
             elif ')})' in dk:
@@ -303,7 +326,7 @@ class OrchestrateJS:
         for i,v in enumerate(self.js.split("='")):
             if len(v.split('~')) > 500:
                 for code in v.split('~'):
-                    if len(code) == 65:
+                    if len(code) == 65 and ('+' in code and '-' in code):
                         self.flow_data['turnstile_siteKey'] = code
 
                     if len(code) in [49, 50] and 'explicit' in code:
@@ -312,31 +335,43 @@ class OrchestrateJS:
 
         for i,v in enumerate(self.js.split('f-')):
             if 'e[f]' in v:
-                self.f_less = int(v.split(',')[0]) if v.split(',')[0][:3].isnumeric() else 'Fuck you'
+                self.f_less = int(v.split(',')[0]) if v.split(',')[0][:2].isnumeric() else 'Fuck you'
 
         for i,v in enumerate(self.js.split('parseInt(')):
             if '}(' in v[:500]:
                 variaba = v.split('}(')[1][:2]
                 self.obf_number = int(v.split('}(' + variaba)[1].split('),')[0].strip())
-                print(self.obf_number)
+
+        # unknown array (super obfuscated)
+        unk_values = []
+
+        if not self.is_flow_auto:
+            for i,v in enumerate(self.js.split(']=performance[')):
+                if '={}' in v and '=0,' in v:
+                    for letter in self.obf_letters:
+                        if ('(),' + letter + '={},' + letter + '[') in v and f']={letter}' in v and 'eM[' in v[(len(v) - 22):] and v[:1].isalpha() and v[2:3] == '(':
+                            variale = v[:2]
+                            v = v.split(letter + '={},')[1].split(f',eM[{variale}')[0]
+ 
+                            for l in v.split(f'{variale}('):
+                               if l[:2].isnumeric():
+                                    unk_values.append(int(l.split(')')[0]))
 
         self.parseInt = self.parseInt_values()
-        print(self.parseInt)
         self.interactive_data = self.intauto_values()
-        print(self.interactive_data)
         OrchestrateJS.set_orchestrate_data(self.interactive_data)
 
         _int_keys_l = list(self.interactive_data.keys())
         _int_values_I = list(self.interactive_data.values())
  
-        self.complete_interactive_data(_int_values_I)
+        self.complete_interactive_data(_int_values_I, unk_values)
 
-if __name__ == '__main__':
-    c = CF_Solver(
-        'https://nopecha.com/demo/cloudflare',
-        siteKey='0x4AAAAAAAAjq6WYeRDKmebM'
-    )
-    orc = c.cf_orchestrate_js(False)
-    p = OrchestrateJS(orc, auto_mode=False)
-    p.parse_params()
-    print(p.flow_data)
+#if __name__ == '__main__':
+#    c = CF_Solver(
+#        'https://nopecha.com/demo/cloudflare',
+#        siteKey='0x4AAAAAAAAjq6WYeRDKmebM'
+#    )
+#    orc = c.cf_orchestrate_js(False)
+#    p = OrchestrateJS(orc, auto_mode=False)
+#    p.parse_params()
+#    print(p.flow_data)
