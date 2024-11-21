@@ -1,4 +1,8 @@
 # Requirements
+- Python 3.11.8+
+```
+pip install -r requirements.txt
+```
 ```
 pip install javascript
 ```
