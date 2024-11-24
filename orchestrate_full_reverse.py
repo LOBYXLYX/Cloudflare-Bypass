@@ -12,19 +12,22 @@ from javascript import require
 
 jsdom = require('jsdom')
 vm = require('vm')
-xml_lib = require('xmlhttprequest')
+node_fetch = require('node-fetch')
 PATH = 'cloudflare-data/orchestrate.json'
 reversed_funcs = execjs.compile(open('cf_reversed_funcs.js', 'r').read())
 
+class ReversedObjects:
+    unknown_array: dict[str, int] = None
+
 class VM_Automation:
-    def __init__(self, domain, userAgent):
+    def __init__(self, domain, userAgent, cf_html=False):
         self.domain = domain
         self.userAgent = userAgent
         self.resource_loader = jsdom.ResourceLoader({'userAgent': self.userAgent})
         self.dom_context = None
         self.ov1_contentType = 'application/x-www-form-urlencoded'
 
-        self.dom_context = jsdom.JSDOM('', {
+        self.window = jsdom.JSDOM(self._cf_create_html(cf_html), {
             'url': self.domain,
             'referrer': self.domain + '/',
             'contentType': 'text/html',
@@ -34,6 +37,103 @@ class VM_Automation:
             'runScripts': 'dangerously',
             'resources': self.resource_loader
         }).getInternalVMContext()
+
+        self.resolutions = (
+            (3440,1440,3440,1400),
+            (1924,1007,1924,1007),
+            (1920,1080,1920,1040),
+            (1280,720,1280,672),
+            (1920,1080,1920,1032),
+            (1366,651,1366,651),
+            (1366,768,1366,738),
+            (1920,1080,1920,1050)
+        )
+        self._initialize_window()
+
+    def _initialize_window(self):
+        o_height, o_width, i_width, i_height = random.choice(list(self.resolutions))
+
+        self.window.devicePixelRatio = random.uniform(1.2, 1.9)
+        self.window.innerHeight = i_height
+        self.window.innerWidth = i_width
+        self.window.outerHeight = o_height
+        self.window.outerWidth = o_width
+
+        self.window.origin = 'https://challenges.cloudflare.com'
+        self.window.originAgentCluster = False
+        self.window.orientation = 0
+        self.window.isSecureContext = True
+
+        website_information = {
+            'appCodeName': 'Mozilla',
+            'appName': 'Netscape',
+            'appVersion': self.userAgent.replace('Mozilla ', ''),
+            'cookieEnabled': True,
+            'contacts': {},
+            'credentials': {},
+            'deviceMemory': (1 << random.randint(1, 4)),
+            'doNotTrack': None,
+            'ink': {},
+            'maxTouchPoints': 2,
+            'keyboard': {},
+            'locks': {},
+            'hardwareConcurrency': 8,
+            'mimeTypes': {'length': 0},
+            'ml': {},
+            'bluetooth': {'onadvertisementreceived': None},
+            'clipboard': {},
+            'connection': {
+                'downLink': 3.45,
+                'downLinkMax': 100,
+                'effectiveType': random.choice(['4g', 'hg', '3g']),
+                'onchange': None,
+                'ontypechange': None,
+                'rtt': 150,
+                'saveData': True,
+                'type': 'cellular'
+            },
+            'geolocation': {},
+            'gpu': {'wgslLanguageFeatures': {'size': 0}},
+            'devicePosture': {
+                'onchange': None,
+                'type': 'continuous'
+            },
+            'mediaCapabilities': {},
+            'mediaDevices': {},
+
+            'mediaSession': {'metadata': None, 'playbackState': 'none'},
+            'plugins': {'length': 0, 'refresh': None},
+            'scheduling': {},
+            'usb': {'onconnect': None, 'ondisconnect': None},
+            'wakeLock': {},
+            'webkitPersistentStorage': {},
+            'webkitTemporaryStorage': {},
+            'onLine': True,
+            'pdfViewerEnabled': False,
+            'permissions': {},
+            'platform': 'Linux armv81',
+            'product': 'Gecko',
+            'productSub': '20030107',
+            'virtualKeyboard': {}, # <= unknown keyboard
+            'xr': {'ondevicechange': None},
+            'userAgent': self.userAgent,
+            'webdriver': False,
+            'vendor': 'Google Inc.',
+            'vendorSub': ''
+        }
+        self.window.clientInformation = website_information
+
+    def _cf_create_html(self, html):
+        if html:
+            # for cf_clearance
+            #ray = ClearanceBase.cf_ray
+            #timestamp = ClearanceBase.encoded_timestamp
+
+            with open('cloudflare-data/clearance_base.html', 'r') as f:
+                html_code = f.read()#.replace('CF_RAY', ray).replace('TIMESTAMP', timestamp)
+            print(html_code)
+            return html_code
+        return ''
 
     def get_reversed_func(self, func_name='h'):
         with open('cf_reversed_funcs.js', 'r') as f:
@@ -45,34 +145,47 @@ class VM_Automation:
             return code.split('//@')[1].split('//$')[0]
 
     def send_ov1_request(self, flowUrl, flowToken, cfChallenge, cfRay):
-        self.dom_context.XMLHttpRequest = xml_lib.XMLHttpRequest
+        self.window.fetch = node_fetch
 
-        vm.Script(self.get_reversed_func()).runInContext(self.dom_context)
+        vm.Script(self.get_reversed_func()).runInContext(self.window)
         print(f'(v_{cfRay}) challenge encrypted:', flowToken[:70]+'....')
     
         vm.Script('''
-        function cfrequest(flow, encryptedToken, challengeToken, cfRay) {
+        function cfrequest(flow, encryptedToken, challengeToken, cRay) {
             return new Promise((resolve, reject) => {
-                x = new window.XMLHttpRequest(),
-                x.open('POST', flow, true),
-                x.timeout = 2500 * (1 + 0),
-                x.ontimeout = function(){
-                    h()
-                },
-                x.setRequestHeader('Content-Type', 'ov1_type'),
-                x.setRequestHeader('CF-Challenge', challengeToken),
-                x.onreadystatechange = function() {
-                    if (l = '600010', x.readyState != 4)
-                        return;
-                    if (x.status != 200 && x.status != 304)
-                        return;
-                },
-                x.onload = function() {
-                    resolve(x.status);
-                },
-                x.send(`v_${cfRay}=${encryptedToken}`)
+                window.fetch(flow, {
+                    "headers": {
+                        "accept": "*/*",
+                        "accept-language": "es-US,es-419;q=0.9,es;q=0.8",
+                        "cf-challenge": challengeToken,
+                        "cf-chl-retryattempt": "0",
+                        "content-type": "ov1_type",
+                        "save-data": "on",
+                        "sec-ch-ua": '"Not-A.Brand";v="99", "Chromium";v="124"',
+                        "sec-ch-ua-arch": '""',
+                        "sec-ch-ua-bitness": '""',
+                        "sec-ch-ua-full-version": '"124.0.6327.4"',
+                        "sec-ch-ua-full-version-list": '"Not-A.Brand";v="99.0.0.0", "Chromium";v="124.0.6327.4"',
+                        "sec-ch-ua-mobile": "?1",
+                        "sec-ch-ua-model": '"SM-A032M"',
+                        "sec-ch-ua-platform": '"Android"',
+                        "sec-ch-ua-platform-version": '"13.0.0"',
+                        "sec-fetch-dest": "empty",
+                        "sec-fetch-mode": "cors",
+                        "sec-fetch-site": "same-origin"
+                    },
+                    "referrer": "https://nopecha.com/demo/cloudflare",
+                    "referrerPolicy": "same-origin",
+                    "body": `v_${cRay}=${encryptedToken}`,
+                    "method": "POST",
+                    "mode": "cors",
+                    "credentials": "omit"
+                })
+                .then(response => response.text())
+                .then(data => resolve(data))
             });
         }
+
         async function wait(u, e, c, r) {
             try {
                 const status = await cfrequest(u, e, c, r);
@@ -81,11 +194,11 @@ class VM_Automation:
                 console.log(err)
             }
         }
-        '''.replace('ov1_type', self.ov1_contentType)).runInContext(self.dom_context)
+        '''.replace('ov1_type', self.ov1_contentType)).runInContext(self.window)
 
         vm.Script('''
         wait("url", "encrypted", "_challenge", "_ray")
-        '''.replace('url', flowUrl).replace('encrypted', flowToken).replace('_challenge', cfChallenge).replace('_ray', cfRay)).runInContext(self.dom_context)
+        '''.replace('url', flowUrl).replace('encrypted', flowToken).replace('_challenge', cfChallenge).replace('_ray', cfRay)).runInContext(self.window)
 
     @staticmethod
     def analyze_obf(number, f_less, obf_code, obf_number, parseint_gen, parentesis):
@@ -134,7 +247,7 @@ class VM_Automation:
         return result
 
     def reverse_website_identifier(self) -> dict[typing.Union[int, str], typing.Any]:
-        vm.Script(self.get_reversed_func('iden')).runInContext(self.dom_context)
+        vm.Script(self.get_reversed_func('iden')).runInContext(self.window)
         vm.Script('''
         function ffEge(D, E, F, G) {
             if (E === null || E === void 0)
@@ -172,24 +285,55 @@ class VM_Automation:
                 D = f.contentWindow,
                 E = {},
                 E = ffEge(D, D, '', E),
-                E = ffEge(D, D.clientInformation || D.navigator, 'n.', E),
-                E = ffEge(D, D.contentDocument, 'd.', E),
+                E = ffEge(D, window.clientInformation || window.navigator, 'n.', E),
+                E = ffEge(D, f.contentDocument, 'd.', E),
                 window.document.body.removeChild(f),
                 F = {},
                 F.r = E,
                 F.e = null,
-                F
+                JSON.stringify(F.r)
             } catch(err) {
-                return G = {}, G.r = {}, G.e = err, G
+                return G = {}, G.r = {}, G.e = err, G 
             }
         }
-        ''').runInContext(self.dom_context)
-        result = json.loads(vm.Script('B()').runInContext(self.dom_context))
+        ''').runInContext(self.window)
+        result = str(vm.Script('B()').runInContext(self.window))
         return result
 
+    def decrypt_response(self, response, cf_ray):
+        vm.Script('''
+        function eO(f, r, m) {
+            const _add = (l, m) => l + m;
+            const _subtract = (l, m) => l - m;
+
+            for (
+                m,
+                j = 32,
+                l = r + '_' + 0,
+                l = l.replace(/./g, function(n, s) {
+                    j ^= l.charCodeAt(s)
+                }),
+                f = window.atob(f),
+                console.log(f),
+                k = [],
+                i = -1;
+                !isNaN(m = f.charCodeAt(++i));
+                k.push(String.fromCharCode(_add(_subtract((m & 255) - j, i % 65535), 65535) % 255))
+            );
+            console.log(k.join(''))
+            console.log(r)
+            return k.join('')
+        }
+        ''').runInContext(self.window)
+        vm.Script('eO("resp", "ray")'.replace('resp', response).replace("ray", cf_ray)).runInContext(self.window)
+
+    @staticmethod
+    def encrypt_flow_data(enc_code, obf_v, analyzer):
+        pass
+                
 class OrchestrateJS:
     """
-    Reverse Engineering Cloudflare Javascript
+    Cloudflare Orchestrate Anaylzer
     """
     def __init__(self, code_js: str, auto_mode: bool) -> None:
         self.js = code_js
@@ -274,6 +418,19 @@ class OrchestrateJS:
         #print('cloudflare floats:', encrypter_floats_gens)
         return encrypter_floats_gens[:len(encrypter_floats_gens) - 1]
 
+    def encrypter_func(self):
+        func_g = None
+        b_v = None
+
+        for i,v in enumerate(self.js.split("'g':function(")):
+            if len(v[:35].split(',')) > 15 and 'Object[' in v:
+                func_g = 'function g(' + v.split(",'j':function")[0]
+                print(func_g)
+                b_v = v[:50].split('{if(')[1][:2]
+                print(b_v)
+
+        VM_Automation.encrypt_flow_data()
+
     def complete_interactive_data(self, I_IntValues, unknown_values) -> None:
         if not self.is_flow_auto:
             for _value in I_IntValues:
@@ -283,6 +440,8 @@ class OrchestrateJS:
                         if f[:1].isnumeric():
                             if '1e3' in f:
                                 f = f.replace('1e3', '1000')
+                            elif '5e2' in f:
+                                f = f.replace('5e2', '500')
 
                             self._all_int_values.append(int(f.split(')')[0]))
 
@@ -324,11 +483,14 @@ class OrchestrateJS:
         else:
             self.flow_data['ass_param2'] = _find_object_value(l)
 
-        for _value in unknown_values:
-            lp = self.find_obf_value(_value)
-
-            self.flow_data['unknown_array'][lp] = 0
-            print(_value, lp)
+        if ReversedObjects.unknown_array is None:
+            for _value in unknown_values:
+                lp = self.find_obf_value(_value)
+            
+                self.flow_data['unknown_array'][lp] = 0
+            ReversedObjects.unknown_array = self.flow_data['unknown_array']
+        else:
+            self.flow_data['unknown_array'] = ReversedObjects.unknown_array
 
     def intauto_values(self) -> dict[str, str]:
         def _find_index(js):
@@ -391,6 +553,9 @@ class OrchestrateJS:
             if 'e[f]' in v:
                 self.f_less = int(v.split(',')[0]) if v.split(',')[0][:2].isnumeric() else 'Fuck you'
 
+        self.encrypter_func()
+        sys.exit()
+
         for i,v in enumerate(self.js.split('parseInt(')):
             if '}(' in v[:500]:
                 variaba = v.split('}(')[1][:2]
@@ -398,8 +563,7 @@ class OrchestrateJS:
 
         # unknown array (super obfuscated)
         unk_values = []
-
-        if not self.is_flow_auto:
+        if ReversedObjects.unknown_array is None:
             for i,v in enumerate(self.js.split(']=performance[')):
                 if '={}' in v and '=0,' in v:
                     for letter in self.obf_letters:

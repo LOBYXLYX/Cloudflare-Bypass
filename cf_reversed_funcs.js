@@ -123,16 +123,14 @@ function pf(siteUrl){
     return f
 }
 
-function decryptResponse(f, m, ray) {
+function decryptResponse(f, m) {
     const idk1 = (n, s) => n % s;
     const idk2 = (n, s) => n - s;
 
     for (
-        g = {},
-        h = g,
         m,
         j = 32,
-        l = ray + '_' + 0,
+        l = '8e6ccee0abb8370d' + '_' + 0,
         l = l.replace(/./g, function(n, s) {
             'jdvfH' === 'jdvfH' ? j ^= l.charCodeAt(s) : m = 'challenge-form'
         }),
@@ -215,3 +213,8 @@ function analyzeDeobf(number, f_less, store_code, obf_reor, obf_num) {
     }
     return b(number, store_code, f_less);
 }
+
+
+//var resp_t = process.argv[2]
+//c#onsole.log(resp_t);
+//console.log(decryptResponse(resp_t))

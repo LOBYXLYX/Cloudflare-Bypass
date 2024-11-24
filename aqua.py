@@ -92,7 +92,6 @@ class CF_MetaData:
             domain=self.domain.replace('https://', ''),
             useragent=self.userAgent
         )
-
         base_str = json.dumps(base_data, separators=(',', ':'))
         siteKey, wb_floats = self._get_sitekey_value()
 
@@ -103,7 +102,6 @@ class CF_MetaData:
         )
 
         wb = result.stdout.strip()
-
         s, cf_ray = self._get_s_parameter()
         return wb, s, cf_ray
 
@@ -254,10 +252,6 @@ class CF_TurnstileBase(CF_MetaData):
         self.d_find_value = lambda index: self.d[index].split("'")[1]
         self.b_find_value = lambda index: self.b[index].split("'")[1]
 
-    def parse_cf_orchestrate(self, auto=False) -> dict[str, typing.Union[str, None]]:
-        data = self.parse_orchestrate_params(js=self.cf_orchestrate_js(auto))
-        return data
-
     def init_cf_params(self):
         self.d, self.b, self.cf_ray = CF_Parser.cf_params(
             domain=self.domain,
@@ -293,7 +287,10 @@ class CF_TurnstileBase(CF_MetaData):
             self.cRay = self.d_find_value(4)
 
         flow_url_part, cf_challenge_value = self.build_flow_ov1(flow_auto, chl_opt)
-        complet_flow_url = f'{self.main_domain}/cdn-cgi/challenge-platform/h/b/flow/ov1/{flow_url}/' + flow_url_part
+        if flow_auto:
+            complet_flow_url = f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/flow/ov1/{flow_url}/' + flow_url_part
+        else:
+            complet_flow_url = f'{self.main_domain}/cdn-cgi/challenge-platform/h/b/flow/ov1/{flow_url}/' + flow_url_part
 
         self.vm_automation.send_ov1_request(
             flowUrl=complet_flow_url, 
@@ -408,7 +405,7 @@ class CF_Solver(CF_MetaData):
     def _proxy_dict(self):
         if self.proxy_obj is not None:
             if 'https://' in self.proxy_obj:
-                return self.proxy
+                return self.proxy_obj
             else:
                 return 'https://' + self.proxy_obj
 
@@ -452,6 +449,9 @@ class CF_Solver(CF_MetaData):
             oj.parse_params()
             enc_floats = oj.get_encrypter_floats()
 
+            if oj.flow_data['flow_url'] is None or oj.flow_data['turnstile_siteKey'] is None:
+                raise ValueError('Failed to analyze Flow URL/Turnstile siteKey', oj.flow_data)
+
             return oj, js, enc_floats
 
         oj, cf_js, enc_f = _get_orchestrate_data()
@@ -476,7 +476,12 @@ class CF_Solver(CF_MetaData):
             siteKey=oj2.flow_data['turnstile_siteKey'],
             encoder_path='chl_api_encoder.js',
             flow_auto=True,
-            cf_interactive=cf_int2.cf2_flow_data(self.domain, CF_MetaData.parse_domain(self.domain)),
+            cf_interactive=cf_int2.cf2_flow_data(
+                self.domain, 
+                CF_MetaData.parse_domain(self.domain),
+                oj.flow_data['really_a_key'],
+                oj.flow_data['onload_token']
+            ),
             encrypter_floats=enc_f2,
             chl_opt=chl_opt
         )
@@ -484,10 +489,10 @@ class CF_Solver(CF_MetaData):
     def cookie(self): 
         wb, s_param, self.cf_ray = self.cf_cookie_parse()
         payload = {
-            'wb': wb,
+            'wp': wb,
             's': s_param
         }
-
+        print(payload)
         self.client.headers.update(self.update_sec_header())
 
         jsd = self.client.post(
@@ -503,4 +508,5 @@ if __name__ == '__main__':
         #jsd_main='/cdn-cgi/challenge-platform/h/b/scripts/jsd/62ec4f065604/main.js',
         #jsd_request='/cdn-cgi/challenge-platform/h/b/jsd/r'
     )
+    print('Solving Turnstile....')
     cf.solve_turnstile()

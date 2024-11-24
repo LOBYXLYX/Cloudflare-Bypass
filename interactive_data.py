@@ -304,8 +304,8 @@ class CF_Interactive(OrchestrateJS):
 
     def perform_now(self) -> tuple[float, float]:
         p1 = reversed_funcs.call('perfom')
-        time.sleep(round(random.uniform(0.9, 1.9), 2))
         p2 = reversed_funcs.call('perfom')
+        print(p1, p2)
         return p1, p2
 
     def encode_final_chl(self, cf_ray, flow_url, domain, userAgent):
@@ -348,18 +348,6 @@ class CF_Interactive(OrchestrateJS):
     def invest_data(self, data) -> dict[str, typing.Any]:
         return {k: data[k] for k in reversed(data)}
 
-    def static_unknown_data(self):
-        return {
-            "fVuV0": 0,
-            "UMde6": 0,
-            "XeRL1": 0,
-            "BlYw1": 0,
-            "XIFZQ2": 0,
-            "ALpsH0": 0,
-            "XBVy7": 0,
-            "TiEp8": 0
-        }
-
     def cf1_flow_data(self) -> dict[str, typing.Any]:
         new_flow_data = {}
 
@@ -371,26 +359,26 @@ class CF_Interactive(OrchestrateJS):
             '02': self.find_value(1),
             '03': self.find_value(11),
             '04': 0,
-            '05': eMp3 - eMp4,
-            '06': eMp1 - eMp2,
+            '05': abs(eMp3 - eMp4) if (eMp3 - eMp4) < 0 else eMp3 - eMp4,
+            '06': abs(eMp1 - eMp2) if (eMp1 - eMp2) < 0 else eMp1 - eMp2,
             '07': 1,
             '08': self.find_value(8),
             '09': self.find_value(16),
-            '10': self.static_unknown_data(),
+            '10': self.flow_data['unknown_array'],
             '11': False,
             '12': False,
-            '13': self.flow_data['ass_param1'],
+            '13': self.flow_data['ass_param2'],
             '14': '',
             '15': [],#self.generate_equal_data(c=random.randint(2, 3)),
             '16': 0,
-            '17': self.flow_data['ass_param2']
+            '17': self.flow_data['ass_param1']
         }
         for key, value in zip(self.interactive_data.keys(), ordered_flow.values()):
             new_flow_data[key] = value
 
         return new_flow_data#self.invest_data(new_flow_data)
 
-    def cf2_flow_data(self, domain, parsed_domain):
+    def cf2_flow_data(self, domain, parsed_domain, really_key, onload_token):
         new_flow_data = {}
 
         eMp1, eMp2 = self.perform_now()
@@ -406,7 +394,7 @@ class CF_Interactive(OrchestrateJS):
             '07': 1,
             '08': self.find_value(19),
             '09': self.find_value(18),
-            '10': self.static_unknown_data(),
+            '10': self.flow_data['unknown_array'],
             '11': 'undefined',
             '12': 'undefined',
             '13': self.flow_data['ass_param1'],
@@ -421,7 +409,7 @@ class CF_Interactive(OrchestrateJS):
             '22': self.find_value(13),
             '23': 0,
             '24': self.flow_data['really_a_key'],
-            '25': 'https://{}/turnstile/v0/b/{}/api.js?onload={}&render=explicit'.format(self.find_value(2), self.flow_data['really_a_key'], self.flow_data['onload_token']),
+            '25': 'https://{}/turnstile/v0/b/{}/api.js?onload={}&render=explicit'.format(self.find_value(2), really_key, onload_token),
             '26': domain,
             '27': parsed_domain,
             '28': self.find_value(9),
