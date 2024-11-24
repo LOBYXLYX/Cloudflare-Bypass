@@ -492,7 +492,6 @@ class CF_Solver(CF_MetaData):
             'wp': wb,
             's': s_param
         }
-        print(payload)
         self.client.headers.update(self.update_sec_header())
 
         jsd = self.client.post(
