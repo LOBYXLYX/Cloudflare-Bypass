@@ -64,7 +64,7 @@ class VM_Automation:
         self.window.orientation = 0
         self.window.isSecureContext = True
 
-        website_information = {
+        self.window.clientInformation = {
             'appCodeName': 'Mozilla',
             'appName': 'Netscape',
             'appVersion': self.userAgent.replace('Mozilla ', ''),
@@ -114,14 +114,36 @@ class VM_Automation:
             'platform': 'Linux armv81',
             'product': 'Gecko',
             'productSub': '20030107',
+            'serviceWorker': {
+                'controller': None,
+                'oncontrollerchange': None,
+                'onmessage': None,
+                'onmessageerror': None,
+                'ready': None
+            },
+            'storage': {'onquotachange': None},
+            'storageBuckets': {},
+            'userActivation': {
+                'hasBeenActive': True,
+                'isActive': False
+            },
+            'managed': {'onmanagedconfigurationchange': None},
+            'presentation': {'defaultRequest': None, 'receiver': None},
             'virtualKeyboard': {}, # <= unknown keyboard
             'xr': {'ondevicechange': None},
             'userAgent': self.userAgent,
+            'userAgentData': {
+                'brands': [
+                    {'brand': 'Not-A.Brand', 'version': '99'},
+                    {'brand': 'Chromium', 'version': '124'}
+                ],
+                'mobile': True,
+                'platform': 'Linux'
+            },
             'webdriver': False,
             'vendor': 'Google Inc.',
             'vendorSub': ''
         }
-        self.window.clientInformation = website_information
 
     def _cf_create_html(self, html):
         if html:
@@ -147,9 +169,7 @@ class VM_Automation:
     def send_ov1_request(self, flowUrl, flowToken, cfChallenge, cfRay):
         self.window.fetch = node_fetch
 
-        vm.Script(self.get_reversed_func()).runInContext(self.window)
-        print(f'(v_{cfRay}) challenge encrypted:', flowToken[:70]+'....')
-    
+        vm.Script(self.get_reversed_func()).runInContext(self.window) 
         vm.Script('''
         function cfrequest(flow, encryptedToken, challengeToken, cRay) {
             return new Promise((resolve, reject) => {
@@ -189,19 +209,22 @@ class VM_Automation:
         async function wait(u, e, c, r) {
             try {
                 const status = await cfrequest(u, e, c, r);
-                console.log(`(${u}) ov1_status_code:`, status);
+                return status;
             } catch(err) {
                 console.log(err)
             }
         }
         '''.replace('ov1_type', self.ov1_contentType)).runInContext(self.window)
 
-        vm.Script('''
+        result = vm.Script('''
         wait("url", "encrypted", "_challenge", "_ray")
         '''.replace('url', flowUrl).replace('encrypted', flowToken).replace('_challenge', cfChallenge).replace('_ray', cfRay)).runInContext(self.window)
+        print('cloudflare response:', result[:60])
+        decrypted = self.decrypt_response(result, cfRay)
+        print('decrypted:', decrypted[:90])
 
     @staticmethod
-    def analyze_obf(number, f_less, obf_code, obf_number, parseint_gen, parentesis):
+    def analyze_obf(number, f_less, obf_code, obf_number, parseint_gen, parentesis, _return_c=False):
         codee = '''
         for (
             gF = b,
@@ -242,6 +265,8 @@ class VM_Automation:
             );
         }
         '''.replace('INT_GEN', parseint_gen).replace('FF_LESS', str(f_less)).replace('OBFUSC_CODE', obf_code).replace('OBFUSC_NUMBER', str(obf_number)).replace('PARENTESI', parentesis)
+        if _return_c:
+            return codee
         vm.Script(codee).runInThisContext()
         result = vm.Script('b(Number(NUMBER))'.replace('NUMBER', str(number))).runInThisContext()
         return result
@@ -314,22 +339,36 @@ class VM_Automation:
                     j ^= l.charCodeAt(s)
                 }),
                 f = window.atob(f),
-                console.log(f),
                 k = [],
                 i = -1;
                 !isNaN(m = f.charCodeAt(++i));
                 k.push(String.fromCharCode(_add(_subtract((m & 255) - j, i % 65535), 65535) % 255))
             );
-            console.log(k.join(''))
-            console.log(r)
             return k.join('')
         }
         ''').runInContext(self.window)
-        vm.Script('eO("resp", "ray")'.replace('resp', response).replace("ray", cf_ray)).runInContext(self.window)
+        result = vm.Script('eO("resp", "ray")'.replace('resp', response).replace("ray", cf_ray)).runInContext(self.window)
+        return result
+
+    def emulate_decrypted(self, vm_code):
+        vm.Script(vm_code).runInContext(self.window)
 
     @staticmethod
-    def encrypt_flow_data(enc_code, obf_v, analyzer):
-        pass
+    def encrypt_flow_data(data, turnkey, enc_code, obf_v, operators, **kwargs):
+        vm.Script(VM_Automation.analyze_obf(number=None, **kwargs, _return_c=True)).runInThisContext()
+        vm.Script('var fidk = (number) => b(Number(number))'.replace('fidk', obf_v)).runInThisContext()
+        vm.Script(operators).runInThisContext()
+
+        vm.Script(enc_code).runInThisContext()
+        vm.Script('''
+        function h(y, str_key) {
+            return g(y, 6, function(z) {   
+                return str_key.charAt(z);
+            });
+        }
+        ''').runInThisContext()
+        result = vm.Script("h('_payload', '_turnkey')".replace('_payload', data).replace('_turnkey', turnkey)).runInThisContext()
+        return result
                 
 class OrchestrateJS:
     """
@@ -395,6 +434,16 @@ class OrchestrateJS:
         )
         return find_string
 
+    def _array_entry_executed(self, code):
+        v = None
+        code = code.replace("':", "':'").replace(",'", "','").replace('}}', "}'}").replace("'", '"').replace('d={', '{')
+        d_json = json.loads(code)
+
+        for value in list(d_json.values()):
+            if '(' in value and ')' in value and (value[:1].isalpha() and not value.startswith('function')):
+                v = value[:2]
+        return v
+
     def get_encrypter_floats(self) -> str:
         g_func = None
         encrypter_floats_gens = ''
@@ -418,18 +467,42 @@ class OrchestrateJS:
         #print('cloudflare floats:', encrypter_floats_gens)
         return encrypter_floats_gens[:len(encrypter_floats_gens) - 1]
 
-    def encrypter_func(self):
+    def encrypter_array(self, data, _siteKey):
         func_g = None
         b_v = None
 
         for i,v in enumerate(self.js.split("'g':function(")):
             if len(v[:35].split(',')) > 15 and 'Object[' in v:
                 func_g = 'function g(' + v.split(",'j':function")[0]
-                print(func_g)
-                b_v = v[:50].split('{if(')[1][:2]
-                print(b_v)
+                b_v = v[:75].split('{if(')[1][:2]
+                o_v = v[:75].split('{if(' + f'{b_v}=')[1][:2]
+                func_g = func_g.replace(f'{b_v}={o_v},', f'{b_v} = (number) => b(number),')
+                break
 
-        VM_Automation.encrypt_flow_data()
+        for i,v in enumerate(self.js.split("'h':function(")):
+            if f',d=' in v[(len(v) - 1570):(len(v) - 1000)] and v.count('function') > 20 and '=String[' in v[(len(v) - 35):len(v)]:
+                #print(v[(len(v) - 1570):len(v)])
+                #print(v[(len(v) - 1570):len(v)].split(f',d=' + '{'))
+                spli1 = v[(len(v) - 1570):len(v)].split(f',d=' + '{')[1]
+                spli2 = 'd={' + spli1.split('=String[')[0]
+                d_v = spli2[:len(spli2) - 2]
+                d_v = d_v.replace(self._array_entry_executed(d_v), b_v)
+                break
+
+        result = VM_Automation.encrypt_flow_data(
+            data,
+            _siteKey,
+            func_g, 
+            b_v, 
+            d_v, 
+            f_less=self.f_less,
+            obf_code=self.parse_js_storaged_code(),
+            obf_number=self.obf_number,
+            parseint_gen=self.parseInt,
+            parentesis=self.double_parentesis
+        )
+        #print('this encrypter!', result)
+        return result
 
     def complete_interactive_data(self, I_IntValues, unknown_values) -> None:
         if not self.is_flow_auto:
@@ -482,6 +555,8 @@ class OrchestrateJS:
             self.flow_data['ass_param2'] = l
         else:
             self.flow_data['ass_param2'] = _find_object_value(l)
+
+        self.encrypter_array('hello xd, { nnxs es gei lol 2998}', self.flow_data['turnstile_siteKey'])
 
         if ReversedObjects.unknown_array is None:
             for _value in unknown_values:
@@ -552,9 +627,9 @@ class OrchestrateJS:
         for i,v in enumerate(self.js.split('f-')):
             if 'e[f]' in v:
                 self.f_less = int(v.split(',')[0]) if v.split(',')[0][:2].isnumeric() else 'Fuck you'
-
-        self.encrypter_func()
-        sys.exit()
+                if self.f_less == 'Fuck you':
+                    for dd in v.split('e[f]'):
+                        print(dd)
 
         for i,v in enumerate(self.js.split('parseInt(')):
             if '}(' in v[:500]:
@@ -574,6 +649,7 @@ class OrchestrateJS:
                             for l in v.split(f'{variale}('):
                                if l[:2].isnumeric():
                                     unk_values.append(int(l.split(')')[0]))
+
 
         self.parseInt = self.parseInt_values()
         self.interactive_data = self.intauto_values()
