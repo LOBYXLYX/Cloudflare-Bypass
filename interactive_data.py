@@ -8,7 +8,7 @@ import uuid
 import time
 
 from dataclasses import dataclass
-from orchestrate_full_reverse import OrchestrateJS
+from orchestrate_full_reverse import OrchestrateJS, ReversedObjects
 #from aqua import CF_Solver
 from wb_base_data import wbBaseData
 from Crypto.Random import get_random_bytes
@@ -281,9 +281,28 @@ class FinalChlParams:
 
 class CF_Interactive(OrchestrateJS):
     def __init__(self, js, chl_opts, auto_mode=False):
+        self.auto_mode = auto_mode
         self.chl_opts = chl_opts
-        super().__init__(code_js=js, auto_mode=auto_mode)
+        super().__init__(code_js=js, auto_mode=self.auto_mode)
 
+        if not self.auto_mode:
+            ReversedObjects.cf_chl_opt = {
+                'cType': self.find_value(3),
+                'cRay': self.find_value(4),
+                'cvId': self.find_value(1),
+                'cUPMDTk': self.find_value(6).split('__cf_chl_tk=')[1],
+                'chlApiTimeoutEncountered': None
+            }
+        else:
+            ReversedObjects.cf_chl_opt.update({
+                'chlApiRcV': self.find_value(9),
+                'chlApiSitekey': self.find_value(6),
+                'cH': self.find_value(16),
+                'md': self.find_value(24),
+                'chlApiWidgetId': self.find_value(5),
+                'chlApiTimeoutEncountered': self.find_value(10),
+                'cITimeS': self.find_value(25)
+            })
         self.parse_params()
 
     def generate_equal_data(self,value='window.frameElement', c=2):
@@ -378,99 +397,63 @@ class CF_Interactive(OrchestrateJS):
 
         return new_flow_data#self.invest_data(new_flow_data)
 
-    def cf2_flow_data(self, domain, parsed_domain, really_key, onload_token):
+    def cf2_flow_data(
+        self, 
+        domain, 
+        parsed_domain, 
+        really_key, 
+        onload_token,
+        flow2_token,
+        website_cf_ray
+    ):
         new_flow_data = {}
 
         eMp1, eMp2 = self.perform_now()
         eMp3, eMp4 = self.perform_now()
 
         ordered_flow = {
-            '01': self.find_value(11),
+            '01': self.find_value(14),
             '02': self.find_value(1),
-            '03': self.find_value(4),
+            '03': 0,
             '04': 0,
-            '05': eMp3 - eMp4,
-            '06': eMp1 - eMp2,
+            '05': abs(eMp3 - eMp4) if (eMp3 - eMp4) < 0 else eMp3 - eMp4,
+            '06': abs(eMp1 - eMp2) if (eMp1 - eMp2) < 0 else eMp1 - eMp2,
             '07': 1,
-            '08': self.find_value(19),
-            '09': self.find_value(18),
+            '08': self.find_value(25),
+            '09': self.find_value(24),
             '10': self.flow_data['unknown_array'],
             '11': 'undefined',
             '12': 'undefined',
             '13': self.flow_data['ass_param1'],
             '14': '',
-            '15': self.generate_equal_data(),
+            '15': self.generate_equal_data(c=2),
             '16': 0,
             '17': self.flow_data['ass_param2'],
             '18': '0',
             '19': self.find_value(6),
             '20': 'interactive',
-            '21': self.find_value(12),
-            '22': self.find_value(13),
+            '21': website_cf_ray,# self.find_value(15),
+            '22': flow2_token,
             '23': 0,
-            '24': self.flow_data['really_a_key'],
+            '24': really_key,
             '25': 'https://{}/turnstile/v0/b/{}/api.js?onload={}&render=explicit'.format(self.find_value(2), really_key, onload_token),
             '26': domain,
             '27': parsed_domain,
             '28': self.find_value(9),
-            '29': round(random.uniform(10, 4000), random.randint(2, 15)),
-            '30': round(random.uniform(10, 4000), random.randint(2, 15)),
+            '29': 28371.339999973774,#random.uniform(10, 500),
+            '30': 899.9950000047684,#,random.uniform(10, 500),
             '31': 0,
             '32': 0,
-            '33': round(random.uniform(10, 4000), random.randint(2, 15)),
+            '33': 863.8199999928474,#random.uniform(10, 500),
             '34': 0,
-            '35': round(random.uniform(10, 4000), random.randint(2, 15)),
-            '36': round(random.uniform(10, 4000), random.randint(2, 15)),
-            '37': round(random.uniform(10, 4000), random.randint(2, 15)),
-            '38': round(random.uniform(10, 4000), random.randint(2, 15))
+            '35': 2.615000009536743,#random.uniform(10, 500),
+            '36': 53.8649999499321,#random.uniform(10, 500),
+            '37': 120.11500000953674,#random.uniform(10, 500),
+            '38': 12.415000021457672#andom.uniform(10, 500),
         }
         for key, value in zip(self.interactive_data.keys(), ordered_flow.values()):
             new_flow_data[key] = value
-        return self.invest_data(new_flow_data)
-    
-    def cf3_flow_data(self, parsed_domain, cf_ray, flow_url, domain, userAgent):
-        new_flow_data = {}
-        ordered_flow = {
-            '01': self.find_value(11),
-            '02': self.find_value(1),
-            '03': self.find_value(4),
-            '04': 0,
-            '05': round(random.uniform(10, 4000), random.randint(2, 15)),
-            '06': round(random.uniform(10, 4000), random.randint(2, 15)),
-            '07': 1,
-            '08': self.find_value(19),
-            '09': self.find_value(18),
-            '10': self.static_unknown_data(),
-            '11': 'undefined',
-            '12': 'undefined',
-            '13': self.flow_data['ass_param1'],
-            '14': '',
-            '15': self.generate_equal_data(),
-            '16': 0,
-            '17': self.flow_data['ass_param2'],
-            '18': '0',
-            '19': self.find_value(6),
-            '20': 'interactive',
-            '21': self.find_value(12),
-            '22': self.find_value(13),
-            '23': 0,
-            '24': self.flow_data['really_a_key'],
-            '25': 'https://{}/turnstile/v0/b/{}/api.js?onload={}&render=explicit'.format(self.find_value(2), self.flow_data['really_a_key'], self.flow_data['onload_token']),
-            '26': domain,
-            '27': parsed_domain,
-            '28': self.find_value(9),
-            '29': round(random.uniform(10, 4000), random.randint(2, 15)),
-            '30': round(random.uniform(10, 4000), random.randint(2, 15)),
-            '31': 0,
-            '32': 0,
-            '33': round(random.uniform(10, 4000), random.randint(2, 15)),
-            '34': 0,
-            '35': round(random.uniform(10, 4000), random.randint(2, 15)),
-            '36': round(random.uniform(10, 4000), random.randint(2, 15)),
-            '37': round(random.uniform(10, 4000), random.randint(2, 15)),
-            '38': round(random.uniform(10, 4000), random.randint(2, 15))
-            **self.encode_final_chl(cf_ray, flow_url, domain, userAgent)
-        }
+        return new_flow_data
 
 if __name__ == '__main__':
     print(CF_Widget.timestamp())
