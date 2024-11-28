@@ -30,8 +30,12 @@ response = cf.client.post(url=url, data=data, json=json, timeout=10)
 ```
 
 # Turnstile Reverse Engineering Progress
-### Reversing challenge token:
-![devt](https://github.com/LOBYXLYX/Cloudflare-Bypass/blob/main/20241107_171954.jpg)
-![cons](https://github.com/LOBYXLYX/Cloudflare-Bypass/blob/main/20241107_172047.jpg)
+- Reversed challenge token:
+![dev](https://github.com/LOBYXLYX/Cloudflare-Bypass/blob/main/images/20241107_171954.jpg)
+![cons](https://github.com/LOBYXLYX/Cloudflare-Bypass/blob/main/images/20241107_172047.jpg)
+
+- Challenge Request Reversed:
+![ch](https://github.com/LOBYXLYX/Cloudflare-Bypass/blob/main/images/20241126_205308.jpg)
+
 
 discord: lyxz2
