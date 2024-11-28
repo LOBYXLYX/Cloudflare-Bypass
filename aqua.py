@@ -45,7 +45,6 @@ class CF_MetaData:
     def _get_sitekey_value(self) -> tuple[str, str]:
         r = self.clientRequest.get(self.domain + self.jsd_main_url, follow_redirects=True).text
         variab = r.split('function a(')[1][:2]
-        print('variable:', variab)
         spli1 = r.split(f"{variab}='")[1].split(',')
 
         # search index
@@ -540,8 +539,6 @@ class CF_Solver(CF_MetaData):
             'wp': wb,
             's': s_param
         }
-        print(payload)
-        print(len(payload['wp']))
         self.client.headers.update(self.update_sec_header())
 
         jsd = self.client.post(
@@ -549,13 +546,3 @@ class CF_Solver(CF_MetaData):
             json=payload
         )
         return jsd.cookies['cf_clearance']
-
-if __name__ == '__main__':
-    cf = CF_Solver(
-        'https://nopecha.com/demo/cloudflare',
-        siteKey='0x4AAAAAAAAjq6WYeRDKmebM'
-        #jsd_main='/cdn-cgi/challenge-platform/h/b/scripts/jsd/62ec4f065604/main.js',
-        #jsd_request='/cdn-cgi/challenge-platform/h/b/jsd/r'
-    )
-    print('Solving Turnstile....')
-    cf.solve_turnstile()
