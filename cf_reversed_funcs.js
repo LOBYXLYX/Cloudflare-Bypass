@@ -82,6 +82,10 @@ function perfom() {
     return performance.now();
 }
 
+function fA(d, opt) {
+    return opt.ck && opt.cK.indexOf(d) - 1
+}
+
 function pf(siteUrl){
     var f = {}; // cf retard moment
     var h = undefined;

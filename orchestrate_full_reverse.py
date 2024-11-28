@@ -21,21 +21,26 @@ cK = 'b'
 class ReversedObjects:
     unknown_array: dict[str, int] = None
     challenge_website: str = None
-    challenge_cloudflsre: str = None
+    challenge_cloudflare: str = None
     cf_chl_opt: dict[str, typing.Any] = {}
-    chl_opt_keys: dict[str, typing.Any] = {'_setTimeout': [], 'other': []}
+    chl_opt_keys: dict[str, typing.Any] = {
+        'what_hello': {}, 
+        'other': [],
+        '_setTimeout': []
+    }
     initialized_onload: bool = False
     decrypt_presicion: float = 255
 
 class VM_Automation:
-    def __init__(self, domain, userAgent, cf_html=False):
+    def __init__(self, domain, userAgent, cf_html=False, html_code=None):
         self.domain = domain
         self.userAgent = userAgent
         self.resource_loader = jsdom.ResourceLoader({'userAgent': self.userAgent})
         self.dom_context = None
         self.ov1_contentType = 'application/x-www-form-urlencoded'
+        self.html_code = html_code
 
-        self.window = jsdom.JSDOM(self._cf_create_html(cf_html), {
+        self.window = jsdom.JSDOM(self._cf_create_html(cf_html, html_code), {
             'url': self.domain,
             'referrer': self.domain + '/',
             'contentType': 'text/html',
@@ -58,7 +63,7 @@ class VM_Automation:
         )
         self._initialize_window()
 
-    def _initialize_window(self):
+    def _initialize_window(self) -> None:
         o_height, o_width, i_width, i_height = random.choice(list(self.resolutions))
 
         self.window.devicePixelRatio = random.uniform(1.2, 1.9)
@@ -153,19 +158,20 @@ class VM_Automation:
             'vendorSub': ''
         }
 
-    def _cf_create_html(self, html):
+    def _cf_create_html(self, html, code) -> str:
         if html:
+            if code is not None:
+                return code
             # for cf_clearance
             #ray = ClearanceBase.cf_ray
             #timestamp = ClearanceBase.encoded_timestamp
 
             with open('cloudflare-data/clearance_base.html', 'r') as f:
                 html_code = f.read()#.replace('CF_RAY', ray).replace('TIMESTAMP', timestamp)
-            print(html_code)
             return html_code
         return ''
 
-    def get_reversed_func(self, func_name='h'):
+    def get_reversed_func(self, func_name='h') -> str:
         with open('cf_reversed_funcs.js', 'r') as f:
             code = f.read()
 
@@ -174,9 +180,9 @@ class VM_Automation:
         elif func_name == 'iden':
             return code.split('//@')[1].split('//$')[0]
 
-    def send_ov1_request(self, flowUrl, flowToken, cfChallenge, cfRay, referrer):
+    def send_ov1_request(self, flowUrl, flowToken, cfChallenge, cfRay, referrer) -> str:
         self.window.fetch = node_fetch
-        print('cloudflare challenge URL:', flowUrl, referrer)
+        print('cloudflare challenge URL:\033[36m', flowUrl, '\033[0m')
 
         vm.Script(self.get_reversed_func()).runInContext(self.window) 
         vm.Script('''
@@ -242,7 +248,7 @@ class VM_Automation:
         return window_decrypted
 
     @staticmethod
-    def analyze_obf(number, f_less, obf_code, obf_number, parseint_gen, parentesis, _return_c=False):
+    def analyze_obf(number, f_less, obf_code, obf_number, parseint_gen, parentesis, _return_c=False) -> str:
         codee = '''
         for (
             gF = b,
@@ -343,7 +349,7 @@ class VM_Automation:
         result = str(vm.Script('B()').runInContext(self.window))
         return result
 
-    def decrypt_response(self, response, cf_ray):
+    def decrypt_response(self, response, cf_ray) -> str:
         vm.Script('''
         function eO(f, r, m) {
             const _add = (l, m) => l + m;
@@ -369,7 +375,7 @@ class VM_Automation:
         result = vm.Script('eO("resp", "ray")'.replace('resp', response).replace("ray", cf_ray)).runInContext(self.window)
         return result
 
-    def undefined(self, array):
+    def undefined(self, array) -> str:
         vm.Script('''
         var modified = {};
         var i = () => undefined;
@@ -389,7 +395,7 @@ class VM_Automation:
         vm.Script('window.parent.postMessage(__, "*")'.replace('__', json.dumps(data))).runInContext(self.window)
 
     @staticmethod
-    def encrypt_flow_data(data, turnkey, enc_code, obf_v, operators, **kwargs):
+    def encrypt_flow_data(data, turnkey, enc_code, obf_v, operators, **kwargs) -> str:
         vm.Script(VM_Automation.analyze_obf(number=None, **kwargs, _return_c=True)).runInThisContext()
         vm.Script('var fi = (number) => b(Number(number))'.replace('fi', obf_v)).runInThisContext()
         vm.Script(operators).runInThisContext()
@@ -405,18 +411,41 @@ class VM_Automation:
         result = vm.Script("h('_payload', '_turnkey')".replace('_payload', data).replace('_turnkey', turnkey)).runInThisContext()
         return result
 
-    def evaluate(self, code: str, decryptedChl: str):
-        print(ReversedObjects.cf_chl_opt)
-        sendRequest = lambda args: print(args)
+    def evaluate(self, code: str, decryptedChl: str, flow_auto) -> dict[str, typing.Any]:
+        sendRequest = lambda arg1, arg2: ''
+
+        self.window.decryptedChl = decryptedChl
         self.window._cf_chl_opt = ReversedObjects.cf_chl_opt
         self.window.sendRequest = sendRequest
+        self.window._o_k = ReversedObjects.chl_opt_keys['what_hello']
 
-        c = code.replace('arguments[0]', 'JSON.parse(window.decryptedChl)').replace('arguments[1]', 'window.sendRequest')
+        _0xL = self.window._o_k['fragment']
 
+        # why jsdom doesnt have Blob, URL and TextEncoder?
+        self.window.Blob = vm.Script('Blob').runInThisContext()
+        self.window.URL = vm.Script('URL').runInThisContext()
+        self.window.TextEncoder = vm.Script('TextEncoder').runInThisContext()
 
+        if flow_auto:
+            vm.Script('''
+            var contain = window.document.createElement('div')
+            window.document.body.appendChild(contain);
+        
+            var _l = {'mode': 'closed'};
+            var _shadow = contain.attachShadow(_l);
 
+            window._cf_chl_opt[window._o_k['fragment']] = _shadow
+        
+            console.log(window._cf_chl_opt)
+            ''').runInContext(self.window)
 
-           
+        c = code.replace('arguments[0]', 'JSON.parse(window.decryptedChl)').replace('arguments[1]', 'window.sendRequest').replace('URL.createObjectURL', 'window.URL.createObjectURL').replace('new Worker(_cf_chl_ctx.MhKn3)', 'null').replace("!window.unnYa3.wLJt8('ur-handler')", "false").replace('document.body ', 'false').replace('document.body.shadowRoot === null', 'false').replace("window._cf_chl_opt.ZMZC0.mode === 'closed'", 'false').replace('document.head.compareDocumentPosition(document.body)', 'false').replace(f"window._cf_chl_opt.{_0xL}.querySelector('style').compareDocumentPosition(window._cf_chl_opt.ZMZC0.querySelector('div')) & Node.DOCUMENT_POSITION_FOLLOWING", 'false').replace(f"document.body.compareDocumentPosition(window._cf_chl_opt.{_0xL}.querySelector('div')) & (Node.DOCUMENT_POSITION_DISCONNECTED | Node.DOCUMENT_POSITION_FOLLOWING | Node.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC)", 'false').replace('TextEncoder', 'window.TextEncoder')#.replace('window.LCNDU2(e);', 'console.log(e); return;')
+
+        vm.Script(c).runInContext(self.window)
+        vm.Script('console.log(_cf_chl_ctx)').runInContext(self.window)
+        result = json.loads(vm.Script('JSON.stringify(_cf_chl_ctx)').runInContext(self.window))
+        return result
+          
 class OrchestrateJS:
     """
     Cloudflare Orchestrate Anaylzer
@@ -507,11 +536,6 @@ class OrchestrateJS:
                     if v[2:3] == '(' and "('|')" not in v[:25]:
                         ReversedObjects.chl_opt_keys['_setTimeout'].append(
                             self.find_obf_value(v.split('(')[1].split(')')[0]))
-
-    def wtf_is_this(self):
-        for i,v in enumerate(self.js.split(".ch||")):
-            if ".au||''," in v[:80]:
-                print(v)
 
     def get_encrypter_floats(self) -> str:
         g_func = None
@@ -611,7 +635,6 @@ class OrchestrateJS:
             pa = code.split("fetch('/cdn-cgi/challenge-platform' + v + '/")[1].split("', {")[0]
             window_data['challenge_pat'] = pa
         return window_data
-
 
     def complete_interactive_data(self, I_IntValues, unknown_values) -> None:
         if not self.is_flow_auto:
@@ -785,9 +808,23 @@ class OrchestrateJS:
                         elif sym[2:3] == '.' and sym[4:5].isnumeric():
                             p = 5
                         ReversedObjects.decrypt_presicion = '2' + sym[:p]
+
+        if self.is_flow_auto:
+            for i,v in enumerate(self.js.split(".ch||")):
+                if v[(len(v) - 2100):len(v)].count('||') >= 5 and i in [0, 1]:
+                    o = v[(len(v) - 2100):len(v)]
+
+                    for lo in o.split('eM'):
+                        if lo[:1] == '[' and 'eN[' in lo[15:25] and '(' in lo[38:50]:
+                            value = lo.split('][')[1].split('(')[1].split(')')[0]
+                            ReversedObjects.chl_opt_keys['what_hello']['fragment'] = self.find_obf_value(value)
+                            break
+
+        ReversedObjects.decrypt_presicion = '255'
+
         #print('calala:', ReversedObjects.decrypt_presicion)
 
-        #print(ReversedObjects.chl_opt_keys['other'])
+        #print(ReversedObjects.chl_opt_keys)
 
         OrchestrateJS.set_orchestrate_data(self.interactive_data)
 
