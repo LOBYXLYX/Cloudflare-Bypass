@@ -6,6 +6,7 @@ import typing
 import random
 import string
 import execjs
+from base64 import b64decode
 from javascript import require
 #from aqua import CF_Solver
 #from storage_orchestrate import set_orchestrate_data, get_orchestrate_data
@@ -248,7 +249,7 @@ class VM_Automation:
         return window_decrypted
 
     @staticmethod
-    def analyze_obf(number, f_less, obf_code, obf_number, parseint_gen, parentesis, _return_c=False) -> str:
+    def analyze_obf(number, f_less, obf_code, obf_number, parseint_gen, parentesis, _return_c=False, split_type='~') -> str:
         codee = '''
         for (
             gF = b,
@@ -280,7 +281,7 @@ class VM_Automation:
         function a(jE) {
             return (
                 (jE = 'OBFUSC_CODE'.split(
-                    "~"
+                    "_blud_this"
                 )),
                 (a = function () {
                     return jE;
@@ -288,16 +289,16 @@ class VM_Automation:
                 a()
             );
         }
-        '''.replace('INT_GEN', parseint_gen).replace('FF_LESS', str(f_less)).replace('OBFUSC_CODE', obf_code).replace('OBFUSC_NUMBER', str(obf_number)).replace('PARENTESI', parentesis)
+        '''.replace('INT_GEN', parseint_gen).replace('FF_LESS', str(f_less)).replace('OBFUSC_CODE', obf_code).replace('OBFUSC_NUMBER', str(obf_number)).replace('PARENTESI', parentesis).replace('_blud_this', split_type)
         if _return_c:
             return codee
         vm.Script(codee).runInThisContext()
         result = vm.Script('b(Number(NUMBER))'.replace('NUMBER', str(number))).runInThisContext()
         return result
 
-    def reverse_website_identifier(self) -> dict[typing.Union[int, str], typing.Any]:
+    def reverse_website_identifier(self, _return_c=False) -> dict[typing.Union[int, str], typing.Any]:
         vm.Script(self.get_reversed_func('iden')).runInContext(self.window)
-        vm.Script('''
+        codee = '''
         function ffEge(D, E, F, G) {
             if (E === null || E === void 0)
                 return G;
@@ -345,13 +346,31 @@ class VM_Automation:
                 return G = {}, G.r = {}, G.e = err, G 
             }
         }
-        ''').runInContext(self.window)
+        '''
+        if _return_c:
+            return codee
+
+        vm.Script(codee).runInContext(self.window)
         result = str(vm.Script('B()').runInContext(self.window))
         return result
 
     def decrypt_response(self, response, cf_ray) -> str:
+        def _response_decoder(string) -> str: # wundow.atob is shit
+            while len(string) % 4 != 0:
+                string += '=' * (4 - len(string) % 4)
+            return b64decode(string.encode('utf-8')).decode('latin-1')
+
+        self.window.bdecode = _response_decoder
         vm.Script('''
-        function eO(f, r, m) {
+        function _atob(string){
+            return new Promise((resolve, reject) => {
+                var bd = window.bdecode(string);
+                if (bd) {
+                    resolve(bd)
+                }
+            });
+        }
+        var eO = async(f, r, m) => {
             const _add = (l, m) => l + m;
             const _subtract = (l, m) => l - m;
 
@@ -362,16 +381,15 @@ class VM_Automation:
                 l = l.replace(/./g, function(n, s) {
                     j ^= l.charCodeAt(s)
                 }),
-                f = window.atob(f),
+                f = await _atob(f),
                 k = [],
                 i = -1;
                 !isNaN(m = f.charCodeAt(++i));
-                k.push(String.fromCharCode(_add(_subtract((m & presicion) - j, i % 65535), 65535) % 255))
+                k.push(String.fromCharCode(_add(_subtract((presicion & m) - j, i % 65535), 65535) % 255))
             );
             return k.join('')
         }
         '''.replace('presicion', str(ReversedObjects.decrypt_presicion))).runInContext(self.window)
-    #   print('VAMOS!!!!!', ReversedObjects.decrypt_presicion)
         result = vm.Script('eO("resp", "ray")'.replace('resp', response).replace("ray", cf_ray)).runInContext(self.window)
         return result
 
@@ -395,8 +413,8 @@ class VM_Automation:
         vm.Script('window.parent.postMessage(__, "*")'.replace('__', json.dumps(data))).runInContext(self.window)
 
     @staticmethod
-    def encrypt_flow_data(data, turnkey, enc_code, obf_v, operators, **kwargs) -> str:
-        vm.Script(VM_Automation.analyze_obf(number=None, **kwargs, _return_c=True)).runInThisContext()
+    def encrypt_flow_data(data, turnkey, enc_code, obf_v, operators, split_type='~', **kwargs) -> str:
+        vm.Script(VM_Automation.analyze_obf(number=None, **kwargs, _return_c=True, split_type=split_type)).runInThisContext()
         vm.Script('var fi = (number) => b(Number(number))'.replace('fi', obf_v)).runInThisContext()
         vm.Script(operators).runInThisContext()
 
@@ -411,20 +429,32 @@ class VM_Automation:
         result = vm.Script("h('_payload', '_turnkey')".replace('_payload', data).replace('_turnkey', turnkey)).runInThisContext()
         return result
 
-    def evaluate(self, code: str, decryptedChl: str, flow_auto) -> dict[str, typing.Any]:
+    def evaluate(
+        self,
+        code: str, 
+        decryptedChl: str, 
+        flow_auto: bool = False,
+        previous_data: dict[str, typing.Any] = None
+    ) -> dict[str, typing.Any]:
         sendRequest = lambda arg1, arg2: ''
 
         self.window.decryptedChl = decryptedChl
         self.window._cf_chl_opt = ReversedObjects.cf_chl_opt
         self.window.sendRequest = sendRequest
         self.window._o_k = ReversedObjects.chl_opt_keys['what_hello']
-
+        
         _0xL = self.window._o_k['fragment']
 
         # why jsdom doesnt have Blob, URL and TextEncoder?
         self.window.Blob = vm.Script('Blob').runInThisContext()
         self.window.URL = vm.Script('URL').runInThisContext()
         self.window.TextEncoder = vm.Script('TextEncoder').runInThisContext()
+
+        def _parse_window_eval():
+            nonlocal code
+
+            t = code.split(".screen.orientation,'so.',")[1].split('var d={};d=')[1].split('(')[0]
+            code = code.replace(t, 'ffEge')
 
         if flow_auto:
             vm.Script('''
@@ -433,16 +463,31 @@ class VM_Automation:
         
             var _l = {'mode': 'closed'};
             var _shadow = contain.attachShadow(_l);
+            _shadow.innerHTML = `__htmlc`
 
             window._cf_chl_opt[window._o_k['fragment']] = _shadow
         
-            console.log(window._cf_chl_opt)
-            ''').runInContext(self.window)
+            '''.replace('__html_c', self.html_code)).runInContext(self.window)
 
-        c = code.replace('arguments[0]', 'JSON.parse(window.decryptedChl)').replace('arguments[1]', 'window.sendRequest').replace('URL.createObjectURL', 'window.URL.createObjectURL').replace('new Worker(_cf_chl_ctx.MhKn3)', 'null').replace("!window.unnYa3.wLJt8('ur-handler')", "false").replace('document.body ', 'false').replace('document.body.shadowRoot === null', 'false').replace("window._cf_chl_opt.ZMZC0.mode === 'closed'", 'false').replace('document.head.compareDocumentPosition(document.body)', 'false').replace(f"window._cf_chl_opt.{_0xL}.querySelector('style').compareDocumentPosition(window._cf_chl_opt.ZMZC0.querySelector('div')) & Node.DOCUMENT_POSITION_FOLLOWING", 'false').replace(f"document.body.compareDocumentPosition(window._cf_chl_opt.{_0xL}.querySelector('div')) & (Node.DOCUMENT_POSITION_DISCONNECTED | Node.DOCUMENT_POSITION_FOLLOWING | Node.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC)", 'false').replace('TextEncoder', 'window.TextEncoder')#.replace('window.LCNDU2(e);', 'console.log(e); return;')
+            vm.Script(self.reverse_website_identifier(True)).runInContext(self.window)
+            _parse_window_eval()
+
+        c = code.replace('arguments[0]', 'JSON.parse(window.decryptedChl)').replace('arguments[1]', 'window.sendRequest').replace('URL.createObjectURL', 'window.URL.createObjectURL').replace('new Worker(_cf_chl_ctx.MhKn3)', 'null').replace("!window.unnYa3.wLJt8('ur-handler')", "true").replace('document.body ', 'true').replace('document.body.shadowRoot === null', 'true').replace("window._cf_chl_opt.ZMZC0.mode === 'closed'", 'true').replace('document.head.compareDocumentPosition(document.body)', 'true').replace(f"window._cf_chl_opt.{_0xL}.querySelector('style').compareDocumentPosition(window._cf_chl_opt.{_0xL}.querySelector('div')) & Node.DOCUMENT_POSITION_FOLLOWING", 'true').replace(f"document.body.compareDocumentPosition(window._cf_chl_opt.{_0xL}.querySelector('div')) & (Node.DOCUMENT_POSITION_DISCONNECTED | Node.DOCUMENT_POSITION_FOLLOWING | Node.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC)", 'true').replace('TextEncoder', 'window.TextEncoder')#.replace('window.LCNDU2(e);', 'console.log(e); return;')
+
 
         vm.Script(c).runInContext(self.window)
-        vm.Script('console.log(_cf_chl_ctx)').runInContext(self.window)
+        if flow_auto:
+            vm.Script('console.log(_cf_chl_ctx)').runInContext(self.window)
+            vm.Script('''
+            Object.entries(_prev_data).forEach(([k, v]) => {
+                Object.entries(_cf_chl_ctx).forEach(([nk, nv]) => {
+                    if (nv === undefined && nk == k) {
+                        _cf_chl_ctx[nk] = v
+                    }
+                })
+            })
+            '''.replace('_prev_data', json.dumps(previous_data))).runInContext(self.window)
+
         result = json.loads(vm.Script('JSON.stringify(_cf_chl_ctx)').runInContext(self.window))
         return result
           
@@ -565,7 +610,7 @@ class OrchestrateJS:
         b_v = None
 
         for i,v in enumerate(self.js.split("'g':function(")):
-            #print('CCCCVVVVVVPPPPP____', v[:400])
+            #{}print('CCCCVVVVVVPPPPP____', v[:400])
             if len(v[:35].split(',')) > 10 and 'Object[' in v:
                 func_g = 'function g(' + v.split(",'j':function")[0]
                 b_v = v[:115].split('{if(')[1][:2]
@@ -575,11 +620,11 @@ class OrchestrateJS:
                 break
 
         for i,v in enumerate(self.js.split("'h':function(")):
-            #print('ccccVVVVV', v[(len(v) - 1810):(len(v) - 900)])
-            if ",d={'" in v[(len(v) - 1810):(len(v) - 900)] and v.count('function') > 10 and '=String[' in v[(len(v) - 35):len(v)]:
+            #print('ccccVVVVV', v[(len(v) - 1910):(len(v) - 900)])
+            if ",d={'" in v[(len(v) - 1910):(len(v) - 900)] and v.count('function') > 10 and '=String[' in v[(len(v) - 35):len(v)]:
                 #print(v[(len(v) - 1570):len(v)])
                 #print(v[(len(v) - 1570):len(v)].split(f',d=' + '{'))
-                spli1 = v[(len(v) - 1810):len(v)].split(f',d=' + '{')[1]
+                spli1 = v[(len(v) - 1910):len(v)].split(f',d=' + '{')[1]
                 spli2 = 'd={' + spli1.split('=String[')[0]
                 #print('DDDDDDDDDDARRAY', spli2)
                 d_v = spli2[:len(spli2) - 2]
@@ -799,9 +844,11 @@ class OrchestrateJS:
 
         for i,v in enumerate(self.js.split('65535')):
             #print('PRESICIOOOOOON', v)
+            #print('LALLALALALALLALALALALALAL', v[len(v) - 200:len(v)])
             if '255' in v[(len(v) - 50):len(v)] and i in [0, 1]:
                 for sym in v[(len(v) - 50):len(v)].split('2'):
-                    if sym[:2] == '55':
+                    #print('fFFFFF', sym[:50])
+                    if sym[:2] == '55' and 'j' in sym[3:8]:
                         p = 2
                         if sym[2:3] == '.' and not sym[4:5].isnumeric():
                             p = 4
@@ -820,7 +867,6 @@ class OrchestrateJS:
                             ReversedObjects.chl_opt_keys['what_hello']['fragment'] = self.find_obf_value(value)
                             break
 
-        ReversedObjects.decrypt_presicion = '255'
 
         #print('calala:', ReversedObjects.decrypt_presicion)
 

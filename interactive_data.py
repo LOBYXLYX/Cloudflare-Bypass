@@ -37,247 +37,6 @@ class CF_Parser:
         b = rep2.text.split(': ')
         return d[28:len(d)], b[1:len(b)], ray
 
-class FinalChlParams:
-    _1 = {
-        '01': 'wbBaseData_values',
-        '02': random.randint(1000, 50000),
-        '03': 'b64_string', # b64,
-        '04': '',
-        '05': 3,
-        '06': {'_06': False},
-        '07': 'yes',
-        '08': ()
-    }
-    _2 = {
-        '01': random.randint(100, 200),
-        '02': 'b64_string', #b64
-        '03': '',
-        '04': 3,
-        '05': 'binascii',
-        '06': 'yes',
-        '07': 'undefined'
-    }
-    _3 = {
-        '01': [],
-        '02': 2,
-        '03': 'b64_string', #b64
-        '04': '',
-        '05': 3,
-        '06': 'yes',
-        '07': ['lang', 'dir'],
-        '08': False,
-        '09': '2',
-        '10': ()
-    }
-    _4 = {
-        '01': random.randint(10, 200),
-        '02': 'b64_string', #b4,
-        '03': '',
-        '04': 3,
-        '05': 'yes',
-        '06': 'binascii',
-        '07': 'undefined'
-    }
-    _5 = {
-        '01': 'htm_la_di>hea>tit>-tmet_ht_co>met_ht_co>met_na_co>met_na_co>sty>-tmet_ht_co>scr_sr>sty>-tscr_sr_as_de_cr>bod_cl>div_cl_ro>div_cl>h1_cl>',
-        '02': 0,
-        '03': 'https://nopecha.com/demo/cloudflare',
-        '04': 'b64_string', # b64
-        '05': '',
-        '06': 3,
-        '07': True,
-        '08': 2,
-        '09': (2**31) + random.randint(100000000, 400000000),
-        '10': 'yes',
-        '11': 4,
-        '12': 5,
-        '13': '/div[1]/div[1]/div[1]/div[1]/div[1]',
-        '14': 43
-    }
-    _6 = {
-        '01': 'XtyOsXtyOsrootrootroot',
-        '02': random.randint(10, 200),
-        '03': 'b64_string', #b4
-        '04': '',
-        '05': 3,
-        '06': 'random',
-        '07': ()
-    }
-    _7 = {
-        '01': 'yes',
-        '02': 0,
-        '03': 'b64_string', #b64,
-        '04': '',
-        '05': 3,
-        '06': 'yes',
-        '07': ()
-    }
-    _8 = {
-        '01': 'status_401',
-        '02': random.randint(500, 2000),
-        '03': 'b64_string', #b64,
-        '04': '',
-        '05': 3,
-        '06': 'yes',
-        '07': 'undefined'
-    }
-    _9 = {
-        '01': 5,
-        '02': False,
-        '03': 0.8,
-        '04': 'b64_string',#b64
-        '05': False,
-        '06': '',
-        '07': 3,
-        '08': -1,
-        '09': False,
-        '10': random.randint(1000, 20000),
-        '11': 'yes',
-        '12': False,
-        '13': True,
-        '14': True,
-        '15': 'undefined'
-    }
-    _10 = {
-        '01': random.randint(10, 200),
-        '02': 'b64_string',#b64
-        '03': '',
-        '04': 3,
-        '05': 'yes',
-        '06': 'unknown_token',
-        '07': 'undefined'
-    }
-    _11 = {
-        '01': [
-            {"t": "n", "i": "navigate"},
-            {"t": "v", "s": 0, "d": 0},
-            {"t": "lf"},
-            {"t": "r", "dlt": random.uniform(100, 50000), "i": "link", "n": "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/cmg/1", "nh": "h3","ts": 361, "bs": 61},
-            {"t": "r", "dlt": random.uniform(100, 50000), "i": "script", "n": "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_api/v1?ray=8de6c4cf6d6ca5f0&lang=auto", "nh": "h3", "ts": random.randint(1000, 60000), "bs": random.randint(1000, 60000)},
-            {"t": "lf"},
-            {"t": "lf"},
-            {"t": "p","i": "first-paint"},
-            {"t": "p", "i": "first-contentful-paint"},
-            {"t": "lf"},
-            {"t": "v", "s": random.uniform(100, 50000),"d": 0},
-            {"t": "v","s": random.uniform(100, 50000), "d": 0},
-            {
-                "t": "r",
-                "dlt": random.uniform(100, 50000),
-                "i": "xmlhttprequest",
-                "n": "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/flow/ov1/1037485612:1730910539:AsDcWZz6St2tT52FfsrQ3kdbv-1pL7gMo2fXlxCqkzU/8de6c4cf6d6ca5f0/iAzHWl20I.x6jIqoYkTFXCKjn6fezHfVe1J29_77iYo-1730913779-1.1.1.1-0kcX6bLhDgC2mKF3tpYMwu.PY3cEaoR5MgU6vETNpQTGRTnJZK9NvygTnD.if3ye",
-                "nh": "h3",
-                "ts": random.randint(1000, 60000),
-                "bs": random.randint(1000, 60000)
-            },
-            {"t": "lf"},
-            {"t": "lf"},
-            {"t": "lf"},
-            {"t": "lf"},
-            {"t": "m", "n": "cp-n-8de6c4cf6d6ca5f0"}
-        ],
-        '02': 1,
-        '03': 'b64_string',#b64
-        '04': '',
-        '05': 3,
-        '06': 'yes',
-        '07': ()
-    }
-    _12 = {
-        '01': 'b64_string',#b64
-        '02': 'yes',
-        '03': '',
-        '04': 10,
-        '05': 3,
-        '06': 'generate_true_values_66',
-        '07': True,
-        '08': random.randint(100, 200),
-        '09': True,
-        '10': 'a',
-        '11': 'undefined',
-        '12': 'undefined',
-        '13': 'object',
-        '14': 'object',
-        '15': 'undefined',
-        '16': False,
-        '17': 'undefined',
-        '18': True,
-        '20': random.randint(10, 100),
-        '21': 0,
-        '22': 1,
-        '23': True,
-        '24': False,
-        '25': -1,
-        '26': -1,
-        '27': '[object Undefined]'
-    }
-    _13 = {
-        '01': 'b64_string',
-        '02': 'yes',
-        '03': '',
-        '01': random.randint(10, 200),
-        '02': '', #b64,
-        '03': '',
-        '04': '3',
-        '05': 'yes',
-        '06': 'token',
-        '07': 'undefined'
-    }
-    _14 = {
-        '01': 'b64_string',
-        '02': 'yes',
-        '03': '',
-        '04': random.randint(100, 500),
-        '05': 3,
-        '06': 'es-US',
-        '07': ["es-US", "es-419", "es"],
-        '08': ['es-MX'],
-        '09': 'es-es',
-        '10': 'diciembre, hora estándar de Colombia',
-        '11': 'eo (Ucrania)',
-        '12': 'Bippity-boppity, Mumbo-jumbo u hocuspocus',
-        '13': '21,000 billones'
-    }
-    _15 = {
-        '01': 'b64_string',
-        '02': 'yes',
-        '03': '',
-        '04': 0,
-        '05': 3,
-        '06': 'yes'
-    }
-    _16 = {
-        '01': 'b64_string',
-        '02': 'unknown_token',
-        '03': '',
-        '04': random.randint(100, 500),
-        '05': 3,
-        '06': 2,
-        '07': 47
-    }
-    _17 = {
-        '01': 'b64_string',
-        '02': 'yes',
-        '03': '',
-        '04': 2,
-        '05': 3,
-        '06': 0,
-        '07': -296,
-        '08': -300,
-        '09': -300,
-        '10': -300,
-        '11': 300,
-        '12': 300,
-        '13': 'America/Bogota'
-    }
-    _18 = {
-        '01': 'b64_string',
-        '02': 'yes',
-        '03': '',
-        '04': 13,
-        '05': 3,
-        '06': 'LXAqOBg3OXBhRFAGOS0DDAtGSRQKQDQWTlcUT0NcEmcGKnBuY2UoNxQYClxvVlEdTDMVTlAWT0RfEGETGQZEHFQ7Nxs/P3Jhb0obGxoKC0caSEdfF2MTHgVGGkEIQTFADmFhYG0uNRQzEEFNYVgaAG8UHQVBGEEPQjNGG1IXShIfJhQ8N3Rjb2EBBjg9AkBWFEYMQjREG1UUSBQKFWIWSEVwb24mMxYzO1tQQ28TByNIHFYUTxYKEmEUTlBDGURZAgUzNHxlbWEqHCUfNUlRWBoNEWETTFBEGkZfFzZFHgNUfmElOxAxO3BKXk0kDiQEQFdHGkFdFzFGHAVBTRcPRCEiO39ta2MqNz8CF35YX1ZREDJGGwdBShQNQjQRTVUSWnAqOBg3OXBhRFAGOS0DDAtGSRQKQDQWTlcUT0NcEmcGKnBuY2UoNxQYClxvVlEdTDMVTlAWT0RfEGETGQZEHFQ7Nxs/P3Jhb0obGxoKC0caSEdfF2MTHgVGGkEIQTFADmFhYG0uNRQzEEFNYVgaAG8UHQVBGEEPQjNGG1IXShIfJhQ8N3Rjb2EBBjg9AkBWFEYMQjREG1UUSBQKFWIWSEVwb24mMxYzO1tQQ28TByNIHFYUTxYKEmEUTlBDGURZAgUzNHxlbWEqHCUfNUlRWBoNEWETTFBEGkZfFzZFHgNUfmElOxAxO3BKXk0kDiQEQFdHGkFdFzFGHAVBTRcPRCEiO39ta2MqNz8CF35YX1ZREDJGGwdBShQNQjQRTVUSWnAqOBg3OXBhRFAGOS0DDAtGSRQKQDQWTlcUT0NcEmcGKnBuY2UoNxQYClxvVlEdTDMVTlAWT0RfEGETGQZEHFQ7Nxs/P3Jhb0obGxoKC0caSEdfF2MTHgVGGkEIQTFADmFhYG0uNRQzEEFNYVgaAG8UHQVBGEEPQjNGG1IXShIfJhQ8N3Rjb2EBBjg9AkBWFEYMQjREG1UUSBQKFWIWSEVwb24mMxYzO1tQQ28TByNIHFYUTxYKEmEUTlBDGURZAgUzNHxlbWEqHCUfNUlRWBoNEWETTFBEGkZfFzZFHgNUfmElOxAxO3BKXk0kDiQEQFdHGkFdFzFGHAVBTRcPRCEiO39ta2MqNz8CF35YX1ZREDJGGwdBShQNQjQRTVUSWnAqOBg3OXBhRFAGOS0DDAtGSRQKQDQWTlcUT0NcEmcGKnBuY2UoNxQYClxvVlEdTDMVTlAWT0RfEGETGQZEHFQ7Nxs/P3Jhb0obGxoKC0caSEdfF2MTHgVGGkEIQTFADmFhYG0uNRQzEEFNYVgaAG8UHQVBGEEPQjNGG1IXShIfJhQ8N3Rjb2EBBjg9AkBWFEYMQjREG1UUSBQKFWIWSEVwb24mMxYzO1tQQ28TByNIHFYUTxYKEmEUTlBDGURZAgUzNHxlbWEqHCUfNUlRWBoNEWETTFBEGkZfFzZFHgNUfmElOxAxO3BKXk0kDiQEQFdHGkFdFzFGHAVBTRcPRCEiO39ta2MqNz8CF35YX1ZREDJGGwdBShQNQjQRTVUSWnAqOBg3OXBhRFAGOS0DDAtGSRQKQDQWTlcUT0NcEmcGKnBuY2UoNxQYClxvVlEdTDMVTlAWT0RfEGETGQZEHFQ7Nxs/P3Jhb0obGxoKC0caSEdfF2MTHgVGGkEIQTFADmFhYG0uNRQzEEFNYVgaAG8UHQVBGEEPQjNGG1IXShIfJhQ8N3Rjb2EBBjg9AkBWFEYMQjREG1UUSBQKFWIWSEVwb24mMxYzO1tQQ28TByNIHFYUTxYKEmEUTlBDGURZAgUzNHxlHA=='
-    }
 
 class CF_Interactive(OrchestrateJS):
     def __init__(self, js, chl_opts, auto_mode=False):
@@ -326,46 +85,6 @@ class CF_Interactive(OrchestrateJS):
         p2 = reversed_funcs.call('perfom')
         print(p1, p2)
         return p1, p2
-
-    def encode_final_chl(self, cf_ray, flow_url, domain, userAgent):
-        b64_symbol = random.choice(['==', '='])
-        _chl = {k.replace('_', ''): v for k, v in FinalChlParams.__dict__.items() if k[1:2].isnumeric()}
-        concat_this = ['wr', 'w6', 'wp', 'w4']
-
-        for payload, values in _chl.items():
-            for pnumber, value in values.items():
-                if value == 'binascii':
-                    _chl[payload][pnumber] = secrets.token_hex(32)
-
-                elif value == 'b64_string':
-                    random_bytes = get_random_bytes(12)
-                    base64_value = random.choice(concat_this) + base64.b64encode(random_bytes).decode('utf-8')[2:]
-                    _chl[payload][pnumber] = base64_value + b64_symbol
-
-                elif value == 'generate_true_values_66':
-                    _chl[payload][pnumber] = self.generate_equal_data(value=True, c=66)
-
-                elif isinstance(value, list):
-                    for i,l in enumerate(value):
-                        if 'n' in value:
-                            if l['n'] == 'cp-n-8de6c4cf6d6ca5f0':
-                                _chl[payload][pnumber][i]['n'] = f'cp-n-{cf_ray}'
-                            elif '/cdn-cgi/challenge-platform/h/b/orchestrate/chl_api' in l['n']:
-                                _chl[payload][pnumber][i]['n'] = f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_api/v1?ray={cf_ray}&lang=auto'
-                            elif '/cdn-cgi/challenge-platform/h/b/flow/ov1' in l['n']:
-                                _chl[payload][pnumber][i]['n'] = flow_url
-
-                elif value == 'wbBaseData_values':
-                    _chl[payload][pnumber] = wbBaseData(
-                        domain=domain.replace('https://', ''),
-                        useragent=userAgent
-                    )
-
-        print(_chl)
-        return _chl
-
-    def invest_data(self, data) -> dict[str, typing.Any]:
-        return {k: data[k] for k in reversed(data)}
 
     def cf1_flow_data(self) -> dict[str, typing.Any]:
         new_flow_data = {}
@@ -426,7 +145,7 @@ class CF_Interactive(OrchestrateJS):
             '12': 'undefined',
             '13': self.flow_data['ass_param1'],
             '14': '',
-            '15': self.generate_equal_data(c=2),
+            '15': self.generate_equal_data(c=random.randint(2, 6)),
             '16': 0,
             '17': self.flow_data['ass_param2'],
             '18': '0',
@@ -440,20 +159,56 @@ class CF_Interactive(OrchestrateJS):
             '26': domain,
             '27': parsed_domain,
             '28': self.find_value(9),
-            '29': 28371.339999973774,#random.uniform(10, 500),
-            '30': 899.9950000047684,#,random.uniform(10, 500),
+            '29': random.uniform(500, 3000),
+            '30': random.uniform(500, 1500),
             '31': 0,
             '32': 0,
-            '33': 863.8199999928474,#random.uniform(10, 500),
+            '33': random.uniform(300, 1200),
             '34': 0,
-            '35': 2.615000009536743,#random.uniform(10, 500),
-            '36': 53.8649999499321,#random.uniform(10, 500),
-            '37': 120.11500000953674,#random.uniform(10, 500),
-            '38': 12.415000021457672#andom.uniform(10, 500),
+            '35': random.uniform(1, 80),
+            '36': random.uniform(5, 150),
+            '37': random.uniform(100, 600),
+            '38': random.uniform(5, 90),
         }
         for key, value in zip(self.interactive_data.keys(), ordered_flow.values()):
             new_flow_data[key] = value
+
+        ReversedObjects.cf_chl_opt['chlApiU'] = ordered_flow['25']
         return new_flow_data
+
+    @staticmethod
+    def eventClick_data() -> dict[str, str]:
+        return {
+            'activeElement': '[object HTMLBodyElement]',
+            'clientX': '',
+            'clientY': '',
+            'height': '1',
+            'isPrimary': 'false',
+            'isTrusted': 'true',
+            'layerX': '',
+            'layerY': '',
+            'movementX': '0',
+            'movementY': '0 ',
+            'offsetX': '',
+            'offsetY': '',
+            'pageX': '',
+            'pageY': '',
+            'pointerId': '2',
+            'pointerType': 'touch',
+            'pressure': '0',
+            'relatedTarget': 'null',
+            'screenX': '',
+            'screenY': '',
+            'srcElement': '[object HTMLInputElement]',
+            'targentialPressure': '',
+            'target': '[object HTMLInputElement]',
+            'timeStamp': str(reversed_funcs.call('perfom') * 1000),
+            'type': 'click',
+            'width': '1',
+            'x': '',
+            'y': ''
+        }
+
 
 if __name__ == '__main__':
     print(CF_Widget.timestamp())

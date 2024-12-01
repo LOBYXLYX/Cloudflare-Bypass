@@ -29,7 +29,7 @@ class CF_MetaData:
     jsd_main_url: str = None
     _domain_parsed: typing.Optional[str] = None
 
-    def _get_s_parameter(self) -> tuple[typing.Optional[str], str]:
+    def clearance_analyzer(self) -> typing.Tuple[typing.Optional[str], str, ...]:
         r = self.clientRequest.get(self.domain + self.jsd_main_url, follow_redirects=True)
         html_site = r.text
 
@@ -40,45 +40,74 @@ class CF_MetaData:
             if v.startswith('0.'):
                 s_param = v.split('/,')[0]
                 break
-        return s_param, cf_ray
 
-    def _get_sitekey_value(self) -> tuple[str, str]:
-        r = self.clientRequest.get(self.domain + self.jsd_main_url, follow_redirects=True).text
-        variab = r.split('function a(')[1][:2]
-        spli1 = r.split(f"{variab}='")[1].split(',')
-
-        # search index
-        def _func_g_index():
-            func_g = r.split("'g'")
-
-            for i,func in enumerate(func_g):
-                if len(func) > 1800:
-                    return i
-
-        func_g = r.split("'g'")[_func_g_index()].split("},'")[0].split('1.')
-
-        wb_float_gens = ''
-
-        for i, v in enumerate(func_g):
-            if v[:2].isnumeric() or v[:1].isnumeric():
-                parsed_length = 2 if v[:2].isnumeric() else 1
-                wb_float_gens += '1.' + v[:parsed_length] + ','
-
-            if v[:3] == '1|1' and (v[:4].split('|')[1].isnumeric() or v[:5].split('|')[1].isnumeric()):
-
-                parsed_length = 4 if v[:4].split('|')[1].isnumeric() else 5
-                wb_float_gens += '1.' + v[:parsed_length].split('|')[1] + ','
-
-        while not len(wb_float_gens.split(',')) > 8:
-            wb_float_gens += str(round(random.uniform(1, 1.99), random.randint(1, 2))) + ','
-
-        wb_float_gens = wb_float_gens[:len(wb_float_gens) - 1]
+        variab = html_site.split('function a(')[1][:2]
+        spli1 = html_site.split(f"{variab}='")[1].split(',')
 
         for i, v in enumerate(spli1):
             if len(v) == 65:
                 siteKey = v
                 break
-        return siteKey, wb_float_gens # convert str to list
+
+        def _encrypter(data, siteKey):
+            func_g = None
+
+            def _parseInt_values(fv) -> str:
+                spli1 = html_site.split(f'({fv}=')[1].split('.push(')[0].split('===')[0]
+        
+                test = spli1.replace('\n', '').replace(' ', '')
+                if '),' in test[(len(test) - 5):len(test)]:
+                    spli2 = (spli1.split('),')[0] + '),')
+
+                elif ',' in test[(len(test) - 5):len(test)]:
+                    spli2 = (spli1.split(',')[0] + ',')
+            
+                spli2 = spli2.replace('\n', '').strip().replace(' ', '')
+        
+                variable = spli2.split('parseInt(')[1][:1]
+                _parseInt = spli2.replace(variable, 'gE')
+                return _parseInt
+
+            for i,v in enumerate(html_site.split(f"'g':function(")):
+                if len(v[:35].split(',')) > 10 and 'Object[' in v:
+                    func_g = 'function g(' + v.split(",'j':function")[0]
+                    b_v = v[:115].split('{if(')[1][:2]
+                    o_v = v[:115].split('{if(' + f'{b_v}=')[1][:2]
+
+                    if ',' in o_v:
+                        o_v = o_v.split(',')[0]
+
+                    func_g = func_g.replace(f'{b_v}={o_v},', f'{b_v} = (number) => b(number),')
+                    break
+    
+            for i,v in enumerate(html_site.split('parseInt(')):
+                if '}}(' in v[:400]:
+                    variaba = v.split('}(')[1][:2]
+                    obf_number = int(v.split('}(' + variaba)[1].split('),')[0].strip())
+                if 'window._' in v[:15] and i == 0:
+                    fv = v.split('try{if(')[1][:1]
+
+            parseInt_gen = _parseInt_values(fv)
+
+            js = html_site.split(f"{variab}='")[1].split("'.split(")[0]
+            f_less = int(html_site.split('f=f-')[1].split(',')[0])
+
+            result = VM_Automation.encrypt_flow_data(
+                data, 
+                siteKey, 
+                func_g, 
+                b_v, 
+                '',
+                split_type=',',
+                f_less=f_less,
+                obf_code=js,
+                obf_number=obf_number,
+                parseint_gen=parseInt_gen,
+                parentesis=''
+            )
+            return result
+
+        return siteKey, s_param, cf_ray, _encrypter
 
     def _get_ray_and_chltK(self) -> tuple[str, str]:
         self.clientRequest.headers.update(self.update_sec_header('navegate'))
@@ -98,16 +127,9 @@ class CF_MetaData:
             useragent=self.userAgent
         )
         base_str = json.dumps(base_data, separators=(',', ':'))
-        siteKey, wb_floats = self._get_sitekey_value()
+        siteKey, s, cf_ray, encrypter = self.clearance_analyzer()
 
-        result = subprocess.run(
-            ['node', 'wb_encoder.js', base_str, siteKey, wb_floats],
-            capture_output=True,
-            text=True
-        )
-
-        wb = result.stdout.strip()
-        s, cf_ray = self._get_s_parameter()
+        wb = encrypter(base_str, siteKey)
         return wb, s, cf_ray
 
     @staticmethod
@@ -251,7 +273,12 @@ class CF_TurnstileBase(CF_MetaData):
         #for i,v in enumerate(self.b):
         #    print(i,v)
 
-        self.vm_automation = VM_Automation(self.domain, self.userAgent)
+        self.vm_automation = VM_Automation(
+            domain=self.domain, 
+            userAgent=self.userAgent,
+            cf_html=True,
+            html_code=self.turnstile_html
+        )
 
         self.d_find_value = lambda index: self.d[index].split("'")[1]
         self.b_find_value = lambda index: self.b[index].split("'")[1]
@@ -288,11 +315,13 @@ class CF_TurnstileBase(CF_MetaData):
         **kwargs
     ) -> tuple[typing.Optional[dict], typing.Optional[dict]]:
         base_interactive = self.vm_automation.undefined(self.baseStr(cf_interactive))
-        #print(base_interactive)
+        print(base_interactive)
         flow_token = encrypter(base_interactive, siteKey)
 
         if flow_auto:
             self.cRay = chl_opt[15].split("'")[1]
+
+            ReversedObjects.cf_chl_opt['chlApicData'] = self.cRay
         else:
             self.cRay = self.d_find_value(4)
 
@@ -301,11 +330,11 @@ class CF_TurnstileBase(CF_MetaData):
         flow_url_part, cf_challenge_value = self.build_flow_ov1(flow_auto, chl_opt)
         if flow_auto:
             complet_flow_url = f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/flow/ov1/{flow_url}/' + flow_url_part
-            ReversedObjects.challenge_cloudflare = complet_flow_url
+            ReversedObjects.challenge_cloudflare = flow_url
             referrer = self.ov1_url
         else:
             complet_flow_url = f'{self.main_domain}/cdn-cgi/challenge-platform/h/b/flow/ov1/{flow_url}/' + flow_url_part
-            ReversedObjects.challenge_website = complet_flow_url
+            ReversedObjects.challenge_website = flow_url
             referrer = self.domain
 
         _window_decrypted = self.vm_automation.send_ov1_request(
@@ -315,7 +344,12 @@ class CF_TurnstileBase(CF_MetaData):
             cfRay=self.cRay,
             referrer=referrer
         )
-        eval_result = self.vm_automation.evaluate(_window_decrypted, base_interactive, flow_auto)
+        eval_result = self.vm_automation.evaluate(
+            code=_window_decrypted, 
+            decryptedChl=base_interactive, 
+            flow_auto=flow_auto,
+            previous_data=cf_interactive
+        )
         return OrchestrateJS.extract_decrypted_data(_window_decrypted, flow_auto), eval_result
                 
 class CF_Solver(CF_MetaData):
@@ -414,6 +448,8 @@ class CF_Solver(CF_MetaData):
         if self.web_cookies:
             self._website_cf_cookies()
 
+        ReversedObjects.cf_chl_opt['chlApiUrl'] = self.domain
+
         super().__init__(
             domain=self.domain,
             clientRequest=self.client, 
@@ -511,8 +547,6 @@ class CF_Solver(CF_MetaData):
             encrypter=oj2.encrypter_array,
             chl_opt=cf_turnstile.b
         )
-        print(challenge_result)
-        print(_eval)
 
         # send clouddlare pat!
         pat = challenge_result['challenge_pat']
@@ -527,9 +561,18 @@ class CF_Solver(CF_MetaData):
         if not 'J' in response and len(response) > 3:
             print(response)
             sys.exit()
-        print(pat, '  Result:', response)
+        print(pat[:70], '  Result:', response)
 
         # stage 4~6 (It was too difficult)
+
+        challenge_result2, _eval2 = cf_turnstile.solve_flow_ov1(
+            flow_url=oj2.flow_data['flow_url'],
+            siteKey=oj2.flow_data['turnstile_siteKey'],
+            flow_auto=True,
+            cf_interactive=_eval,
+            encrypter=oj2.encrypter_array,
+            chl_opt=cf_turnstile.b
+        )
 
 
 
@@ -546,3 +589,13 @@ class CF_Solver(CF_MetaData):
             json=payload
         )
         return jsd.cookies['cf_clearance']
+
+if __name__ == '__main__':
+    cf = CF_Solver(
+        'https://nopecha.com/demo/cloudflare',
+        siteKey='0x4AAAAAAAAjq6WYeRDKmebM'
+        #jsd_main='/cdn-cgi/challenge-platform/h/b/scripts/jsd/62ec4f065604/main.js',
+        #jsd_request='/cdn-cgi/challenge-platform/h/b/jsd/r'
+    )
+    print('Solving Turnstile....')
+    cf.solve_turnstile()
