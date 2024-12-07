@@ -71,8 +71,16 @@ class CF_MetaData:
             for i,v in enumerate(html_site.split(f"'g':function(")):
                 if len(v[:35].split(',')) > 10 and 'Object[' in v:
                     func_g = 'function g(' + v.split(",'j':function")[0]
-                    b_v = v[:115].split('{if(')[1][:2]
-                    o_v = v[:115].split('{if(' + f'{b_v}=')[1][:2]
+
+                    p = 2
+                    if v[:115].split('{if(')[1][1:2] == '=':
+                        p = 1
+                    b_v = v[:115].split('{if(')[1][:p]
+                    p = 2
+
+                    if v[:115].split('{if(' + f'{b_v}=')[1][1:2] == '=':
+                        p = 1
+                    o_v = v[:115].split('{if(' + f'{b_v}=')[1][:p]
 
                     if ',' in o_v:
                         o_v = o_v.split(',')[0]
@@ -165,7 +173,7 @@ class CF_MetaData:
             nonlocal chl_code, params, url, key1
 
             chl = self.clientRequest.get(url, params=params)
-            if ('100,g,' in chl.text or '100,e,' in chl.text) and key1 not in chl.text:
+            if ',100,' in chl.text and key1 not in chl.text:
                 chl_code = chl.text
             else:
                 return _send_orche_thread()
@@ -271,7 +279,11 @@ class CF_TurnstileBase(CF_MetaData):
             self.init_cf_params()
 
         #for i,v in enumerate(self.b):
-        #    print(i,v)
+        ##    print(i,v)
+        #sys.exit()
+        #for i,v in enumerate(self.d):
+         #
+        # print(i, v)
 
         self.vm_automation = VM_Automation(
             domain=self.domain, 
@@ -315,7 +327,8 @@ class CF_TurnstileBase(CF_MetaData):
         **kwargs
     ) -> tuple[typing.Optional[dict], typing.Optional[dict]]:
         base_interactive = self.vm_automation.undefined(self.baseStr(cf_interactive))
-        print(base_interactive)
+        #if flow_auto:
+        #print(base_interactive)
         flow_token = encrypter(base_interactive, siteKey)
 
         if flow_auto:
@@ -348,7 +361,7 @@ class CF_TurnstileBase(CF_MetaData):
             code=_window_decrypted, 
             decryptedChl=base_interactive, 
             flow_auto=flow_auto,
-            previous_data=cf_interactive
+            previous_data=base_interactive
         )
         return OrchestrateJS.extract_decrypted_data(_window_decrypted, flow_auto), eval_result
                 
@@ -561,7 +574,7 @@ class CF_Solver(CF_MetaData):
         if not 'J' in response and len(response) > 3:
             print(response)
             sys.exit()
-        print(pat[:70], '  Result:', response)
+        print('cloudflare pat:', pat[:70], 'got status_code 401')
 
         # stage 4~6 (It was too difficult)
 

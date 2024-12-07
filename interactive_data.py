@@ -47,13 +47,14 @@ class CF_Interactive(OrchestrateJS):
         if not self.auto_mode:
             ReversedObjects.cf_chl_opt = {
                 'cType': self.find_value(3),
-                'cRay': self.find_value(4),
+                '_cRay': self.find_value(4),
                 'cvId': self.find_value(1),
                 'cUPMDTk': self.find_value(6).split('__cf_chl_tk=')[1],
                 'chlApiTimeoutEncountered': None
             }
         else:
             ReversedObjects.cf_chl_opt.update({
+                'cRay': self.find_value(15),
                 'chlApiRcV': self.find_value(9),
                 'chlApiSitekey': self.find_value(6),
                 'cH': self.find_value(16),
@@ -175,6 +176,54 @@ class CF_Interactive(OrchestrateJS):
 
         ReversedObjects.cf_chl_opt['chlApiU'] = ordered_flow['25']
         return new_flow_data
+
+    def cf3_flow_data(self, interactive):
+        new_flow_data = {}
+
+        ordered_flow = {
+            '01': '',
+            '02': self.find_value(15),
+            '03': self.find_value(1),
+            '04': 0,
+            '05': 0,
+            '06': '',
+            '07': '',
+            '08': self.find_value(25),
+            '09': '',
+            '10': self.flow_data['unknown_array'],
+            '11': 1,
+            '00': 'undefined',
+            '12': '0',
+            '13': self.find_value(6),
+            '14': 'interactive',
+            '15': website_cf_ray,
+            '16': '',
+            '17': 0,
+            '18': really_key,
+            '19': 'https://{}/turnstile/v0/b/{}/api.js?onload={}&render=explicit'.format(self.find_value(2), really_key, onload_token),
+            '200': domain,
+            '21': parsed_domain,
+            '22': self.find_value(9),
+            '20': random.uniform(10, 1000),
+            '24': random.uniform(10, 1000),
+            '25': 0,
+            '26': 0,
+            '27': random.uniform(1000, 10000),
+            '28': 0,
+            '29': random.uniform(1000, 10020),
+            '31': random.uniform(100, 1500),
+            '33': random.uniform(40, 400),
+            '34': random.uniform(10, 200),
+            '35': self.flow_data['ass_param2'],
+            '36': 'undefined',
+            '00': '',
+            '37': '',
+            '39': '',
+        }
+        for key, value in interactive.items():
+            for key2, value2 in zip(interactive.keys(), ordered_flow.values()):
+                new_flow_data[key]
+        
 
     @staticmethod
     def eventClick_data() -> dict[str, str]:

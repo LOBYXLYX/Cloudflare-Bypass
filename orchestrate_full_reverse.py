@@ -6,7 +6,7 @@ import typing
 import random
 import string
 import execjs
-from base64 import b64decode
+from pybase64 import b64decode
 from javascript import require
 #from aqua import CF_Solver
 #from storage_orchestrate import set_orchestrate_data, get_orchestrate_data
@@ -14,6 +14,7 @@ from javascript import require
 jsdom = require('jsdom')
 vm = require('vm')
 node_fetch = require('node-fetch')
+node_atob = require('atob')
 PATH = 'cloudflare-data/orchestrate.json'
 reversed_funcs = execjs.compile(open('cf_reversed_funcs.js', 'r').read())
 
@@ -184,6 +185,7 @@ class VM_Automation:
     def send_ov1_request(self, flowUrl, flowToken, cfChallenge, cfRay, referrer) -> str:
         self.window.fetch = node_fetch
         print('cloudflare challenge URL:\033[36m', flowUrl, '\033[0m')
+        print('request payload:', f'v_{cfRay}={flowToken[:80]}....')
 
         vm.Script(self.get_reversed_func()).runInContext(self.window) 
         vm.Script('''
@@ -239,12 +241,11 @@ class VM_Automation:
 
         if not result['success']:
             raise TypeError(f'Cloudflare Challenge Failed ({result["encrypted"]})')
-
         window_decrypted = self.decrypt_response(result['encrypted'], cfRay)
 
-        if 'challenges' in flowUrl:
-            open('cloudflare-data/decrypted.js', 'w').write(window_decrypted)
-        print('decrypted:', window_decrypted[:60])
+        #if 'challenges' in flowUrl:
+        #    open('cloudflare-data/decrypted.js', 'w').write(window_decrypted)
+        print('decrypted:', window_decrypted[:90])
         #sys.exit()
         return window_decrypted
 
@@ -355,22 +356,10 @@ class VM_Automation:
         return result
 
     def decrypt_response(self, response, cf_ray) -> str:
-        def _response_decoder(string) -> str: # wundow.atob is shit
-            while len(string) % 4 != 0:
-                string += '=' * (4 - len(string) % 4)
-            return b64decode(string.encode('utf-8')).decode('latin-1')
+        self.window.custom_atob = node_atob
 
-        self.window.bdecode = _response_decoder
         vm.Script('''
-        function _atob(string){
-            return new Promise((resolve, reject) => {
-                var bd = window.bdecode(string);
-                if (bd) {
-                    resolve(bd)
-                }
-            });
-        }
-        var eO = async(f, r, m) => {
+        var eO = function(f, r, m) {
             const _add = (l, m) => l + m;
             const _subtract = (l, m) => l - m;
 
@@ -381,7 +370,7 @@ class VM_Automation:
                 l = l.replace(/./g, function(n, s) {
                     j ^= l.charCodeAt(s)
                 }),
-                f = await _atob(f),
+                f = window.custom_atob(f),
                 k = [],
                 i = -1;
                 !isNaN(m = f.charCodeAt(++i));
@@ -442,6 +431,7 @@ class VM_Automation:
         self.window._cf_chl_opt = ReversedObjects.cf_chl_opt
         self.window.sendRequest = sendRequest
         self.window._o_k = ReversedObjects.chl_opt_keys['what_hello']
+        self.window._o_s = ReversedObjects.chl_opt_keys['_setTimeout']
         
         _0xL = self.window._o_k['fragment']
 
@@ -449,6 +439,8 @@ class VM_Automation:
         self.window.Blob = vm.Script('Blob').runInThisContext()
         self.window.URL = vm.Script('URL').runInThisContext()
         self.window.TextEncoder = vm.Script('TextEncoder').runInThisContext()
+
+        #print(ReversedObjects.chl_opt_keys)
 
         def _parse_window_eval():
             nonlocal code
@@ -458,6 +450,45 @@ class VM_Automation:
 
         if flow_auto:
             vm.Script('''
+            var mockCanvas = (window) => {
+                window.HTMLCanvasElement.prototype.getContext = function () {
+                    return {
+                        fillRect: function() {},
+                        clearRect: function(){},
+                        getImageData: function(x, y, w, h) {
+                            return  {
+                                data: new Array(w*h*4)
+                            };
+                        },
+                        putImageData: function() {},
+                        createImageData: function(){ return []},
+                        setTransform: function(){},
+                        drawImage: function(){},
+                        save: function(){},
+                        fillText: function(){},
+                        restore: function(){},
+                        beginPath: function(){},
+                        moveTo: function(){},
+                        lineTo: function(){},
+                        closePath: function(){},
+                        stroke: function(){},
+                        translate: function(){},
+                        scale: function(){},
+                        rotate: function(){},
+                        arc: function(){},
+                        fill: function(){},
+                        measureText: function(){
+                            return { width: 0 };
+                        },
+                        transform: function(){},
+                        rect: function(){},
+                        clip: function(){},
+                    };
+                }
+                window.HTMLCanvasElement.prototype.toDataURL = function () {
+                    return "";
+                }
+            }
             var contain = window.document.createElement('div')
             window.document.body.appendChild(contain);
         
@@ -466,8 +497,13 @@ class VM_Automation:
             _shadow.innerHTML = `__htmlc`
 
             window._cf_chl_opt[window._o_k['fragment']] = _shadow
-        
-            '''.replace('__html_c', self.html_code)).runInContext(self.window)
+
+            Object.entries(_prev_d).forEach(([k, v]) => {
+                window._cf_chl_opt[k] = v
+            })
+
+            mockCanvas(window)
+            '''.replace('__htmlc', self.html_code).replace('_prev_d', previous_data)).runInContext(self.window)
 
             vm.Script(self.reverse_website_identifier(True)).runInContext(self.window)
             _parse_window_eval()
@@ -477,16 +513,17 @@ class VM_Automation:
 
         vm.Script(c).runInContext(self.window)
         if flow_auto:
-            vm.Script('console.log(_cf_chl_ctx)').runInContext(self.window)
+            #vm.Script('console.log(_cf_chl_opt)').runInContext(self.window)
+            #vm.Script('console.log(_cf_chl_ctx)').runInContext(self.window)
+            #vm.Script('console.log(Object.keys(_cf_chl_ctx).length - _cf_chl_ctx.lnrK5)').runInContext(self.window)
             vm.Script('''
-            Object.entries(_prev_data).forEach(([k, v]) => {
-                Object.entries(_cf_chl_ctx).forEach(([nk, nv]) => {
-                    if (nv === undefined && nk == k) {
-                        _cf_chl_ctx[nk] = v
-                    }
-                })
+            Object.entries(JSON.parse(_prev_data)).forEach(([k, v]) => {
+                if ((_cf_chl_ctx[k] === undefined || isNaN(_cf_chl_ctx[k]) || _cf_chl_ctx[k] === null) && Object.prototype.hasOwnProperty.call(_cf_chl_ctx, k)) {
+                    _cf_chl_ctx[k] = v
+                }
             })
             '''.replace('_prev_data', json.dumps(previous_data))).runInContext(self.window)
+            vm.Script('console.log(_cf_chl_ctx)').runInContext(self.window)
 
         result = json.loads(vm.Script('JSON.stringify(_cf_chl_ctx)').runInContext(self.window))
         return result
@@ -563,7 +600,7 @@ class OrchestrateJS:
         for value in list(d_json.values()):
             if '(' in value and ')' in value and (value[:1].isalpha() and not value.startswith('function')):
                 v = value[:2]
-        return v
+        return (v or code)
 
     def settimeout_find_values(self):
         func_name = None
@@ -610,7 +647,7 @@ class OrchestrateJS:
         b_v = None
 
         for i,v in enumerate(self.js.split("'g':function(")):
-            #{}print('CCCCVVVVVVPPPPP____', v[:400])
+            #print('CCCCVVVVVVPPPPP____', v[:400])
             if len(v[:35].split(',')) > 10 and 'Object[' in v:
                 func_g = 'function g(' + v.split(",'j':function")[0]
                 b_v = v[:115].split('{if(')[1][:2]
@@ -620,15 +657,15 @@ class OrchestrateJS:
                 break
 
         for i,v in enumerate(self.js.split("'h':function(")):
-            #print('ccccVVVVV', v[(len(v) - 1910):(len(v) - 900)])
-            if ",d={'" in v[(len(v) - 1910):(len(v) - 900)] and v.count('function') > 10 and '=String[' in v[(len(v) - 35):len(v)]:
+           # print('ccccVVVVV', v[(len(v) - 2110):(len(v) - 900)])
+            if ",d={'" in v[(len(v) - 2110):(len(v) - 900)] and v.count('function') > 10 and '=String[' in v[(len(v) - 35):len(v)]:
                 #print(v[(len(v) - 1570):len(v)])
                 #print(v[(len(v) - 1570):len(v)].split(f',d=' + '{'))
-                spli1 = v[(len(v) - 1910):len(v)].split(f',d=' + '{')[1]
+                spli1 = v[(len(v) - 2110):len(v)].split(f',d=' + '{')[1]
                 spli2 = 'd={' + spli1.split('=String[')[0]
                 #print('DDDDDDDDDDARRAY', spli2)
                 d_v = spli2[:len(spli2) - 2]
-#                print('COMPAREEEEEEE', d_v, b_v)
+                #print('COMPAREEEEEEE', d_v, b_v)
                 d_v = d_v.replace(self._array_entry_executed(d_v), b_v)
                 break
 
@@ -736,10 +773,6 @@ class OrchestrateJS:
             self.flow_data['ass_param2'] = _find_object_value(l)
 
         self.encrypter_array('hello xd, { nnxs es gei lol 2998}', self.flow_data['turnstile_siteKey'])
-        #if self.is_flow_auto:
-        #    while True:
-        #        num = int(input('Number: '))
-        #        print('\n', self.find_obf_value(num))
 
         if ReversedObjects.unknown_array is None:
             for _value in unknown_values:
@@ -756,20 +789,28 @@ class OrchestrateJS:
     def intauto_values(self) -> dict[str, str]:
         def _find_index(js):
             for i,v in enumerate(js):
-                if ('100,g,' in v or '100,e,' in v):
+                if ',100,' in v and 'performance[' and v:
                     return i
 
         # bypass dinamic code
         if self.is_flow_auto:
-            dk = self.js.split('setTimeout(')[_find_index(self.js.split('setTimeout('))].split('100,e,')[1][:1265]
+            dk = self.js.split('setTimeout(')[_find_index(self.js.split('setTimeout('))].split(',100,')[1]
+            dk = '{' + dk.split(',{')[1][:1265]
+
             if ']})' in dk:
                 dk = dk.split(']})')[0] + ']}'
+            elif ')})}' in dk:
+                dk = dk.split(')})}')[0] + ')}'
             elif ')})' in dk:
                 dk = dk.split(')})')[0] + ')}'
         else:
-            dk = self.js.split('setTimeout,')[_find_index(self.js.split('setTimeout,'))].split('100,g,')[1][:455]
+            dk = self.js.split('setTimeout,')[_find_index(self.js.split('setTimeout,'))].split(',100,')[1]
+            dk = '{' + dk.split(',{')[1][:455]
+    
             if ']})' in dk:
                 dk = dk.split(']})')[0] + ']}'
+            elif ')})}' in dk:
+                dk = dk.split(')})}')[0] + ')}'
             elif ')})' in dk:
                 dk = dk.split(')})')[0] + ')}'
         return json.loads(dk.replace(':', ":'").replace(",'", "','").replace("}", "'}").replace("''''", "''").replace("'", '"'))
@@ -793,18 +834,18 @@ class OrchestrateJS:
         return _parseInt
 
     def parse_params(self):
-        #self.wtf_is_this()
-        #s#ys.exit()
         for i,v in enumerate(self.js.split('~/')):
             if len(v.split(':')) > 2:
                 js2 = v.split('/~')
                 for s in js2:
-                    if str(round(time.time()))[:5] in s and len(s.split(':')) == 3:
+                    if str(round(time.time()))[:4] in s and len(s.split(':')) == 3:
                         self.flow_data['flow_url'] = s
+                        break
 
         for i,v in enumerate(self.js.split("='")):
             if len(v.split('~')) > 500:
                 for code in v.split('~'):
+
                     if len(code) == 65 and ('+' in code and '-' in code):
                         self.flow_data['turnstile_siteKey'] = code
 
@@ -812,14 +853,13 @@ class OrchestrateJS:
                         self.flow_data['onload_token'] = code.split('onload=')[1].split('&')[0]
                         self.flow_data['really_a_key'] = code.split('/')[1]
 
-        for i,v in enumerate(self.js.split('f-')):
-            if 'e[f]' in v and 'b(c,d' in v:
-                self.f_less = int(v.split(',')[0]) if v.split(',')[0][:2].isnumeric() else 'Fuck you'
+        self.f_less = int(self.js.split('f=f-')[1].split(',')[0])
 
         for i,v in enumerate(self.js.split('parseInt(')):
             if '}(' in v[:500]:
                 variaba = v.split('}(')[1][:2]
-                self.obf_number = int(v.split('}(' + variaba)[1].split('),')[0].strip())
+                #print(v)
+                self.obf_number = int(v.split('}(' + variaba)[1].split('),')[0].replace('\n', '').strip())
 
         self.parseInt = self.parseInt_values()
         self.interactive_data = self.intauto_values()
@@ -847,8 +887,9 @@ class OrchestrateJS:
             #print('LALLALALALALLALALALALALAL', v[len(v) - 200:len(v)])
             if '255' in v[(len(v) - 50):len(v)] and i in [0, 1]:
                 for sym in v[(len(v) - 50):len(v)].split('2'):
-                    #print('fFFFFF', sym[:50])
-                    if sym[:2] == '55' and 'j' in sym[3:8]:
+                    #print('BROOOOO TJI', sym[:30], '\n')
+                    if sym[:2] == '55':
+                        #print('CALALALALLALA', sym[:20])
                         p = 2
                         if sym[2:3] == '.' and not sym[4:5].isnumeric():
                             p = 4
@@ -866,7 +907,6 @@ class OrchestrateJS:
                             value = lo.split('][')[1].split('(')[1].split(')')[0]
                             ReversedObjects.chl_opt_keys['what_hello']['fragment'] = self.find_obf_value(value)
                             break
-
 
         #print('calala:', ReversedObjects.decrypt_presicion)
 
