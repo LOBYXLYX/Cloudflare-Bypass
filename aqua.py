@@ -194,7 +194,7 @@ class CF_MetaData:
     def parse_challenge_auto(self, siteKey) -> tuple[list[str], str, list[str], str, str]:
         cf_reversed_js = execjs.compile(open('cf_reversed_funcs.js', 'r').read())
         l = cf_reversed_js.call('l')
-        ov2_t_url = f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/turnstile/if/ov2/av0/rcv0/0/{l}/{siteKey}/dark/fbE/normal/auto/'
+        ov2_t_url = f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/turnstile/if/ov2/av0/rcv/{l}/{siteKey}/dark/fbE/normal/auto/'
         self.clientRequest.headers.update(self.update_sec_header('iframe'))
 
         ca = self.clientRequest.get(ov2_t_url).text

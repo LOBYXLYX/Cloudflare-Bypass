@@ -6,6 +6,7 @@ import typing
 import random
 import string
 import execjs
+from pybase64 import b64decode
 from javascript import require
 #from aqua import CF_Solver
 #from storage_orchestrate import set_orchestrate_data, get_orchestrate_data
@@ -14,6 +15,8 @@ jsdom = require('jsdom')
 vm = require('vm')
 node_fetch = require('node-fetch')
 node_atob = require('atob')
+#node_worker = require('web-worker')
+
 PATH = 'cloudflare-data/orchestrate.json'
 reversed_funcs = execjs.compile(open('cf_reversed_funcs.js', 'r').read())
 
@@ -438,6 +441,7 @@ class VM_Automation:
         self.window.Blob = vm.Script('Blob').runInThisContext()
         self.window.URL = vm.Script('URL').runInThisContext()
         self.window.TextEncoder = vm.Script('TextEncoder').runInThisContext()
+        #self.window.Worker = node_worker
 
         #print(ReversedObjects.chl_opt_keys)
 
@@ -507,8 +511,8 @@ class VM_Automation:
             vm.Script(self.reverse_website_identifier(True)).runInContext(self.window)
             _parse_window_eval()
 
-        c = code.replace('arguments[0]', 'JSON.parse(window.decryptedChl)').replace('arguments[1]', 'window.sendRequest').replace('URL.createObjectURL', 'window.URL.createObjectURL').replace('new Worker(_cf_chl_ctx.MhKn3)', 'null').replace("!window.unnYa3.wLJt8('ur-handler')", "true").replace('document.body ', 'true').replace('document.body.shadowRoot === null', 'true').replace("window._cf_chl_opt.ZMZC0.mode === 'closed'", 'true').replace('document.head.compareDocumentPosition(document.body)', 'true').replace(f"window._cf_chl_opt.{_0xL}.querySelector('style').compareDocumentPosition(window._cf_chl_opt.{_0xL}.querySelector('div')) & Node.DOCUMENT_POSITION_FOLLOWING", 'true').replace(f"document.body.compareDocumentPosition(window._cf_chl_opt.{_0xL}.querySelector('div')) & (Node.DOCUMENT_POSITION_DISCONNECTED | Node.DOCUMENT_POSITION_FOLLOWING | Node.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC)", 'true').replace('TextEncoder', 'window.TextEncoder')#.replace('window.LCNDU2(e);', 'console.log(e); return;')
-
+        c = code.replace('arguments[0]', 'JSON.parse(window.decryptedChl)').replace('arguments[1]', 'window.sendRequest').replace('URL.createObjectURL', 'window.URL.createObjectURL').replace('new Worker(_cf_chl_ctx.hSNV0)', 'null').replace('document.body ', 'true').replace('document.body.shadowRoot === null', 'true').replace("window._cf_chl_opt.{_0xL}.mode === 'closed'", 'true').replace('document.head.compareDocumentPosition(document.body)', 'true').replace(f"window._cf_chl_opt.{_0xL}.querySelector('style').compareDocumentPosition(window._cf_chl_opt.{_0xL}.querySelector('div')) & Node.DOCUMENT_POSITION_FOLLOWING", 'true').replace(f"document.body.compareDocumentPosition(window._cf_chl_opt.{_0xL}.querySelector('div')) & (Node.DOCUMENT_POSITION_DISCONNECTED | Node.DOCUMENT_POSITION_FOLLOWING | Node.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC)", 'true').replace('TextEncoder', 'window.TextEncoder')
+        #print(c)
 
         vm.Script(c).runInContext(self.window)
         if flow_auto:
