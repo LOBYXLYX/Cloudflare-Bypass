@@ -452,7 +452,7 @@ class CF_Solver(CF_MetaData):
                     'sec-fetch-site': 'none',
                     **self.headers
                 },
-                proxy=self._proxy_dict(),
+                proxies=self._proxy_dict(),
                 timeout=10
             )
 
