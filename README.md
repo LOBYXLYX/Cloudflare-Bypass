@@ -38,7 +38,7 @@ response = cf.client.post(url=url, data=data, json=json, timeout=10)
 
 - small showcase
 
-https://github.com/user-attachments/assets/407ee7d3-86e3-4d19-b3d9-8bd18c908ecc
+https://github.com/user-attachments/assets/4f81bdb8-bc57-4dbb-9a78-f4ef37f96644
 
 
 discord: lyxz2
