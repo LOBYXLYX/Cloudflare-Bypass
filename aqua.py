@@ -29,7 +29,7 @@ class CF_MetaData:
     jsd_main_url: str = None
     _domain_parsed: typing.Optional[str] = None
 
-    def clearance_analyzer(self) -> typing.Tuple[typing.Optional[str], str, ...]:
+    def clearance_analyzer(self) -> tuple:
         r = self.clientRequest.get(self.domain + self.jsd_main_url, follow_redirects=True)
         html_site = r.text
 
