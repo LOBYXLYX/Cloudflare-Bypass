@@ -618,6 +618,7 @@ class CF_Solver(CF_MetaData):
             clientRequest=self.client,
             userAgent=self.userAgent
         )
+        print('THIS DOES NOT WORK ANYMORE BECAUSE OF THE TURNSTILE UPDATE')
         def _get_orchestrate_data(auto_mode=False, *args) -> tuple[object, str, str]:
             js = self.cf_orchestrate_js(auto_mode, *args)
 
