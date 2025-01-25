@@ -1,0 +1,1512 @@
+'<style>
+    @keyframes spin {
+        to {
+            transform: rotate(1turn);
+        }
+    }
+    @keyframes stroke {
+        to {
+            stroke-dashoffset: 0;
+        }
+    }
+    @keyframes scale {
+        0%,
+        to {
+            transform: none;
+        }
+        50% {
+            transform: scaleX(1);
+        }
+    }
+    @keyframes fill {
+        to {
+            transform: scale(1);
+        }
+    }
+    @keyframes fillfail {
+        to {
+            box-shadow: inset 0 30px 0 0 #de1303;
+        }
+    }
+    @keyframes fillfail-offlabel {
+        to {
+            box-shadow: inset 0 0 0 30px #232323;
+        }
+    }
+    @keyframes fillfail-offlabel-dark {
+        to {
+            box-shadow: inset 0 0 0 30px #fff;
+        }
+    }
+    @keyframes scale-up-center {
+        0% {
+            transform: scale(0.01);
+        }
+        to {
+            transform: scale(1);
+        }
+    }
+    @keyframes fade-in {
+        0% {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+    @keyframes fireworks {
+        0% {
+            opacity: 0;
+            transform: scale(0);
+        }
+        50% {
+            opacity: 1;
+            transform: scale(1.5);
+        }
+        to {
+            opacity: 0;
+            transform: scale(2);
+        }
+    }
+    @keyframes firework {
+        0% {
+            opacity: 0;
+            stroke-dashoffset: 8;
+        }
+        30% {
+            opacity: 1;
+        }
+        to {
+            stroke-dashoffset: -8;
+        }
+    }
+    @keyframes unspin {
+        40% {
+            stroke-width: 1px;
+            stroke-linecap: square;
+            stroke-dashoffset: 192;
+        }
+        to {
+            stroke-width: 0;
+        }
+    }
+    .main-wrapper,
+    body,
+    html {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        padding: 0;
+        width: 100%;
+    }
+    .main-wrapper,
+    body {
+        background-color: #fff;
+        color: #232323;
+        font-family: -apple-system, system-ui, blinkmacsystemfont, Segoe UI,
+            roboto, oxygen, ubuntu, Helvetica Neue, arial, sans-serif;
+        font-size: 14px;
+        font-weight: 400;
+        -webkit-font-smoothing: antialiased;
+        font-style: normal;
+    }
+    h1 {
+        color: #232323;
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1.25;
+        margin: 16px 0;
+    }
+    h1,
+    p {
+        text-align: center;
+    }
+    p {
+        font-size: 20px;
+        font-weight: 400;
+        margin: 8px 0;
+    }
+    #content {
+        align-items: center;
+        background-color: #fafafa;
+        border: 1px solid #e0e0e0;
+        box-sizing: border-box;
+        display: flex;
+        gap: 7px;
+        height: 65px;
+        justify-content: space-between;
+        user-select: none;
+    }
+    #branding {
+        display: inline-flex;
+        flex-direction: column;
+        margin: 0 16px 0 0;
+        text-align: right;
+    }
+    #overrun-i,
+    #spinner-i {
+        animation: spin 5s linear infinite;
+        display: flex;
+        height: 30px;
+        width: 30px;
+    }
+    #fail-i {
+        animation: scale-up-center 0.6s cubic-bezier(0.55, 0.085, 0.68, 0.53)
+            both;
+        box-shadow: inset 0 0 0 #de1303;
+    }
+    #fail-i,
+    #success-i {
+        border-radius: 50%;
+        display: flex;
+        height: 30px;
+        width: 30px;
+        stroke-width: 1px;
+        fill: #f8f8f8;
+        stroke: #f8f8f8;
+        stroke-miterlimit: 10;
+    }
+    #success-i {
+        animation: scale-up-center 0.3s cubic-bezier(0.55, 0.085, 0.68, 0.53)
+            both;
+        stroke-width: 6px;
+    }
+    #success-i,
+    #success-i .p1 {
+        box-shadow: inset 0 0 0 #038127;
+    }
+    #success-i .p1 {
+        stroke-dasharray: 242;
+        stroke-dashoffset: 242;
+        animation: stroke 0.4s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+        animation-delay: 0.3s;
+    }
+    #success-pre-i {
+        height: 30px;
+        width: 30px;
+    }
+    #success-pre-i line {
+        stroke: #038127;
+        animation: firework 0.3s ease-out 1;
+        stroke-width: 1;
+        stroke-dasharray: 32 32;
+        stroke-dashoffset: -8;
+    }
+    #success-text {
+        animation: fade-in 1s forwards;
+        opacity: 0;
+    }
+    .success-circle {
+        stroke-dashoffset: 0;
+        stroke-width: 2;
+        stroke-miterlimit: 10;
+        stroke: #038127;
+        fill: #038127;
+    }
+    #expired-text,
+    #overrun-text,
+    #timeout-text {
+        font-size: 14px;
+        font-weight: 400;
+        margin: 0;
+        text-align: inherit;
+    }
+    #error-overrun {
+        margin-top: 2px;
+    }
+    #error-overrun,
+    #expired-refresh-link,
+    #expired-text,
+    #fr-overrun,
+    #timeout-refresh-link,
+    #timeout-text {
+        display: inline-block;
+    }
+    #fr-helper,
+    #fr-overrun {
+        margin-left: 0;
+        margin-right: 0.25em;
+    }
+    #fr-helper-link,
+    #fr-overrun-link {
+        display: inline-block;
+    }
+    .theme-dark #success-i,
+    .theme-dark #success-i .p1 {
+        box-shadow: inset 0 0 0 #0aa937;
+    }
+    .theme-dark .success-circle {
+        stroke: #0aa937;
+        fill: #0aa937;
+    }
+    .theme-dark .expired-circle,
+    .theme-dark .timeout-circle {
+        stroke-dasharray: 166;
+        stroke-dashoffset: 166;
+        stroke-width: 2;
+        stroke-miterlimit: 10;
+        stroke: #999;
+        fill: #999;
+    }
+    .theme-dark #expired-i,
+    .theme-dark #timeout-i {
+        border-radius: 50%;
+        box-shadow: inset 0 0 0 #999;
+        display: flex;
+        height: 30px;
+        width: 30px;
+        stroke-width: 1px;
+        fill: #f8f8f8;
+        stroke: #f8f8f8;
+        stroke-miterlimit: 10;
+    }
+    .theme-dark #challenge-overlay {
+        background-color: #222;
+    }
+    .theme-dark #challenge-error-text,
+    .theme-dark #challenge-overlay {
+        color: #ffa299;
+    }
+    .theme-dark #challenge-error-text a,
+    .theme-dark #challenge-error-text a:link,
+    .theme-dark #challenge-error-text a:visited,
+    .theme-dark #challenge-overlay a,
+    .theme-dark #challenge-overlay a:link,
+    .theme-dark #challenge-overlay a:visited {
+        color: #bbb;
+    }
+    .theme-dark #challenge-error-text a:active,
+    .theme-dark #challenge-error-text a:focus,
+    .theme-dark #challenge-error-text a:hover,
+    .theme-dark #challenge-overlay a:active,
+    .theme-dark #challenge-overlay a:focus,
+    .theme-dark #challenge-overlay a:hover {
+        color: #949494;
+    }
+    .theme-dark .cb-lb .cb-i {
+        background-color: #222;
+        border: 2px solid #dadada;
+    }
+    .theme-dark .cb-lb input:active ~ .cb-i,
+    .theme-dark .cb-lb input:focus ~ .cb-i {
+        border: 2px solid #fbad41;
+    }
+    .theme-dark .cb-lb input:checked ~ .cb-i {
+        background-color: #6d6d6d;
+    }
+    .theme-dark .cb-lb input:checked ~ .cb-i:after {
+        border-color: #fbad41;
+    }
+    .theme-dark h1 {
+        color: #fff;
+    }
+    .theme-dark #challenge-error-title {
+        color: #ffa299;
+    }
+    .theme-dark #challenge-error-title a,
+    .theme-dark #challenge-error-title a:link,
+    .theme-dark #challenge-error-title a:visited {
+        color: #bbb;
+    }
+    .theme-dark #challenge-error-title a:active,
+    .theme-dark #challenge-error-title a:focus,
+    .theme-dark #challenge-error-title a:hover {
+        color: #949494;
+    }
+    .theme-dark #terms {
+        color: #bbb;
+    }
+    .theme-dark #terms a {
+        color: #bbb;
+        white-space: nowrap;
+    }
+    .theme-dark #terms a:link,
+    .theme-dark #terms a:visited {
+        color: #bbb;
+    }
+    .theme-dark #terms a:active,
+    .theme-dark #terms a:focus,
+    .theme-dark #terms a:hover {
+        color: #949494;
+    }
+    .theme-dark #content {
+        background-color: #232323;
+        border-color: #797979;
+    }
+    .theme-dark #qr {
+        fill: #f38020;
+    }
+    .theme-dark .logo-text {
+        fill: #fff;
+    }
+    .theme-dark #fr-helper-loop-link,
+    .theme-dark #fr-helper-loop-link:link,
+    .theme-dark #fr-helper-loop-link:visited {
+        color: #bbb;
+    }
+    .theme-dark #fr-helper-loop-link:active,
+    .theme-dark #fr-helper-loop-link:focus,
+    .theme-dark #fr-helper-loop-link:hover {
+        color: #949494;
+    }
+    .theme-dark #expired-refresh-link,
+    .theme-dark #expired-refresh-link:link,
+    .theme-dark #expired-refresh-link:visited,
+    .theme-dark #timeout-refresh-link,
+    .theme-dark #timeout-refresh-link:link,
+    .theme-dark #timeout-refresh-link:visited {
+        color: #bbb;
+    }
+    .theme-dark #expired-refresh-link:active,
+    .theme-dark #expired-refresh-link:focus,
+    .theme-dark #expired-refresh-link:hover,
+    .theme-dark #timeout-refresh-link:active,
+    .theme-dark #timeout-refresh-link:focus,
+    .theme-dark #timeout-refresh-link:hover {
+        color: #949494;
+    }
+    .theme-dark .overlay {
+        border-color: #ffa299;
+        color: #ffa299;
+    }
+    .theme-dark .error-message,
+    .theme-dark .error-message a,
+    .theme-dark .error-message a:link,
+    .theme-dark .error-message a:visited {
+        color: #ffa299;
+    }
+    #challenge-overlay {
+        background-color: #fafafa;
+        color: #de1303;
+        font-size: 9px;
+        line-height: 10px;
+        position: absolute;
+        top: 0;
+        z-index: 9999;
+    }
+    #challenge-overlay a,
+    #challenge-overlay a:link,
+    #challenge-overlay a:visited {
+        color: #232323;
+    }
+    #challenge-overlay a:active,
+    #challenge-overlay a:focus,
+    #challenge-overlay a:hover {
+        color: #166379;
+    }
+    #logo {
+        height: 25px;
+        margin-bottom: 1px;
+    }
+    .failure-circle {
+        stroke-dasharray: 166;
+        stroke-dashoffset: 166;
+        stroke-width: 2;
+        stroke-miterlimit: 10;
+        stroke: #de1303;
+        fill: #de1303;
+        animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+    }
+    .failure-cross {
+        fill: #fff;
+        transform-origin: bottom center;
+    }
+    @keyframes fade-in.animation {
+        0% {
+            fill: #de1303;
+            stroke: #de1303;
+        }
+        to {
+            fill: #fff;
+            stroke: #fff;
+        }
+    }
+    .failure-cross {
+        animation: fade-in.animation 0.1s cubic-bezier(1, 1, 0, 1) 0.4s
+            backwards;
+    }
+    .cb-c {
+        align-items: center;
+        cursor: pointer;
+        display: flex;
+        margin-left: 16px;
+        text-align: left;
+    }
+    .cb-lb {
+        display: grid;
+        place-items: center;
+    }
+    .cb-lb input {
+        cursor: pointer;
+        grid-area: 1/1;
+        height: 24px;
+        margin: 0;
+        opacity: 0;
+        width: 24px;
+        z-index: 9999;
+    }
+    .cb-lb input:active ~ .cb-i,
+    .cb-lb input:focus ~ .cb-i {
+        border: 2px solid #c44d0e;
+    }
+    .cb-lb input:checked ~ .cb-i {
+        background-color: #fff;
+        border-radius: 5px;
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+    }
+    .cb-lb input:checked ~ .cb-i:after {
+        border: solid #c44d0e;
+        border-radius: 0;
+        border-width: 0 4px 4px 0;
+        height: 12px;
+        left: 5px;
+        top: 0;
+        transform: rotate(45deg) scale(1);
+        width: 6px;
+    }
+    .cb-lb .cb-i {
+        animation: scale-up-center 0.4s cubic-bezier(0.55, 0.085, 0.68, 0.53)
+            both;
+        background: #fff;
+        border: 2px solid #6d6d6d;
+        border-radius: 3px;
+        box-sizing: border-box;
+        grid-area: 1/1;
+        height: 24px;
+        transition: all 0.1s ease-in;
+        width: 24px;
+        z-index: 9998;
+    }
+    .cb-lb .cb-i:after {
+        border-radius: 5px;
+        content: "";
+        position: absolute;
+    }
+    .cb-lb .cb-lb-t {
+        grid-column: 2;
+        margin-left: 8px;
+    }
+    .size-compact {
+        font-size: 14px;
+    }
+    .size-compact #content {
+        align-items: flex-start;
+        display: flex;
+        flex-flow: column nowrap;
+        gap: 0;
+        height: 140px;
+        padding: 12px 0;
+        place-content: space-between;
+    }
+    .size-compact .link-spacer {
+        margin-left: 3px;
+        margin-right: 3px;
+    }
+    .size-compact .cb-c {
+        margin: 0 12px;
+        text-align: left;
+    }
+    .size-compact .cb-container {
+        margin: 0 12px;
+    }
+    .size-compact #logo {
+        height: 25px;
+        margin-bottom: 0;
+    }
+    .size-compact #branding {
+        align-self: flex-end;
+        flex-flow: row-reverse wrap;
+        margin: 0 12px;
+        padding-right: 0;
+        place-content: center flex-start;
+        text-align: right;
+    }
+    .size-compact #terms {
+        text-align: right;
+    }
+    .size-compact #qr {
+        text-align: center;
+    }
+    .size-compact #challenge-error-title {
+        margin-top: 3px;
+        width: auto;
+    }
+    .size-compact #fail {
+        align-items: center;
+        display: flex;
+        flex-flow: row nowrap;
+        line-height: 13px;
+        place-content: center space-evenly;
+        visibility: visible;
+    }
+    .size-compact #expired-text,
+    .size-compact #overrun-text,
+    .size-compact #timeout-text {
+        display: block;
+    }
+    .size-compact #expired-refresh-link,
+    .size-compact #timeout-refresh-link,
+    .size-compact .error-message a {
+        margin: 0;
+    }
+    .size-compact .error-message span {
+        display: block;
+    }
+    .size-compact .error-message.ltr {
+        text-align: end;
+    }
+    .size-compact .error-message.ltr #fr-overrun {
+        margin-left: 0;
+        margin-right: 0;
+    }
+    .cb-lb-t {
+        align-items: center;
+        display: flex;
+        flex-flow: row-reverse nowrap;
+        place-content: center flex-end;
+    }
+    .rtl {
+        direction: rtl;
+    }
+    .rtl .cb-lb-t {
+        margin-left: 0;
+        margin-right: 8px;
+        padding: 0;
+    }
+    .rtl #expired-i,
+    .rtl #fail-i,
+    .rtl #overrun-i,
+    .rtl #spinner-i,
+    .rtl #success-i,
+    .rtl #timeout-i {
+        left: 255px;
+    }
+    .rtl #fr-helper,
+    .rtl #fr-overrun {
+        margin-left: 0.25em;
+        margin-right: 0;
+    }
+    .rtl #branding {
+        margin: 0 0 0 16px;
+        width: 90px;
+    }
+    .rtl #branding,
+    .rtl.size-compact #branding {
+        padding-left: 0;
+        padding-right: 0;
+        text-align: left;
+    }
+    .rtl.size-compact #branding {
+        align-self: flex-start;
+        justify-content: flex-end;
+        margin: 0 12px 0 0;
+    }
+    .rtl.size-compact #terms {
+        text-align: right;
+    }
+    .rtl.size-compact #cf-stage {
+        padding-right: 48px;
+    }
+    .rtl.size-compact .cb-c,
+    .rtl.size-compact .cb-container {
+        margin: 0 12px;
+    }
+    .rtl .cb-lb {
+        text-align: right;
+    }
+    .rtl .cb-lb input {
+        right: 18px;
+    }
+    .rtl .cb-lb input:checked ~ .cb-i:after {
+        right: 6px;
+    }
+    .rtl .cb-lb .cb-i {
+        right: 18px;
+    }
+    .rtl .cb-c {
+        margin-left: 0;
+        margin-right: 15px;
+        text-align: right;
+    }
+    .rtl .cb-container {
+        margin-left: 0;
+        margin-right: 16px;
+    }
+    #terms {
+        color: #232323;
+        display: inline-flex;
+        font-size: 8px;
+        font-style: normal;
+        justify-content: flex-end;
+        line-height: 10px;
+    }
+    #terms .link-spacer {
+        margin: 0 0.2rem;
+    }
+    #terms a {
+        display: inline-block;
+    }
+    #terms a,
+    #terms a:link,
+    #terms a:visited {
+        color: #232323;
+        font-size: 8px;
+        font-style: normal;
+        font-weight: 400;
+        line-height: 10px;
+        text-decoration: underline;
+    }
+    #terms a:active,
+    #terms a:focus,
+    #terms a:hover {
+        color: #166379;
+        text-decoration: underline;
+    }
+    #challenge-error-title {
+        color: #de1303;
+        font-size: 11px;
+        height: 55px;
+        margin: 5px 0;
+        position: absolute;
+        top: 0;
+        width: 200px;
+    }
+    #challenge-error-title a {
+        color: #232323;
+    }
+    #challenge-error-title a:active,
+    #challenge-error-title a:focus,
+    #challenge-error-title a:hover {
+        color: #166379;
+        text-decoration: underline;
+    }
+    #challenge-error-title a:link,
+    #challenge-error-title a:visited {
+        color: #232323;
+    }
+    #challenge-error-title .i-wrapper {
+        display: none;
+    }
+    .unspun .circle {
+        animation: unspin 0.7s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+    }
+    .circle {
+        stroke-width: 3px;
+        stroke-linecap: round;
+        stroke: #038127;
+        stroke-dasharray: 0, 100, 0;
+        stroke-dashoffset: 200;
+        stroke-miterlimit: 1;
+        stroke-linejoin: round;
+    }
+    .main-wrapper {
+        border-spacing: 0;
+    }
+    .p1 {
+        fill: none;
+        stroke: #fff;
+    }
+    .offlabel.size-compact #content {
+        place-content: center center;
+    }
+    .offlabel.size-compact .cb-lb .cb-i,
+    .offlabel.size-compact .cb-lb input {
+        top: 58px;
+    }
+    .expired-circle,
+    .timeout-circle {
+        stroke-dasharray: 166;
+        stroke-dashoffset: 166;
+        stroke-width: 2;
+        stroke-miterlimit: 10;
+        stroke: #797979;
+        fill: #797979;
+    }
+    #expired-i,
+    #timeout-i {
+        border-radius: 50%;
+        box-shadow: inset 0 0 0 #797979;
+        display: flex;
+        height: 30px;
+        width: 30px;
+        stroke-width: 1px;
+        fill: #f8f8f8;
+        stroke: #f8f8f8;
+        stroke-miterlimit: 10;
+        animation: scale 0.3s ease-in-out 0.9s both;
+    }
+    .cb-container {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 30px auto;
+        margin-left: 16px;
+    }
+    .logo-text {
+        fill: #000;
+    }
+    #qr {
+        fill: #232323;
+    }
+    #qr svg {
+        height: 40px;
+        width: 40px;
+    }
+    .main-wrapper.theme-dark,
+    body.theme-dark {
+        background-color: #232323;
+        color: #fff;
+    }
+    #fr-helper-loop-link,
+    #fr-helper-loop-link:link,
+    #fr-helper-loop-link:visited {
+        color: #232323;
+        display: block;
+    }
+    #fr-helper-loop-link:active,
+    #fr-helper-loop-link:focus,
+    #fr-helper-loop-link:hover {
+        color: #166379;
+    }
+    .error-message {
+        color: #de1303;
+        font-size: 9px;
+        font-weight: 500;
+    }
+    .error-message a:link,
+    .error-message a:visited {
+        color: #de1303;
+    }
+    .error-message a:active,
+    .error-message a:focus,
+    .error-message a:hover {
+        color: #166379;
+    }
+    .error-message.ltr {
+        direction: ltr;
+    }
+    .error-message.ltr #fr-overrun {
+        margin-left: 0;
+        margin-right: 0.25em;
+    }
+    #expired-refresh-link,
+    #expired-refresh-link:link,
+    #expired-refresh-link:visited,
+    #timeout-refresh-link,
+    #timeout-refresh-link:link,
+    #timeout-refresh-link:visited {
+        color: #232323;
+    }
+    #expired-refresh-link:active,
+    #expired-refresh-link:focus,
+    #expired-refresh-link:hover,
+    #timeout-refresh-link:active,
+    #timeout-refresh-link:focus,
+    #timeout-refresh-link:hover {
+        color: #166379;
+    }
+    html.rtl {
+        direction: rtl;
+    }
+    .lang-bg-bg.size-compact #branding,
+    .lang-de-de.size-compact #branding,
+    .lang-el-gr.size-compact #branding,
+    .lang-hi-in.size-compact #branding,
+    .lang-ko-kr.size-compact #branding,
+    .lang-sv-se.size-compact #branding,
+    .lang-vi-vn.size-compact #branding,
+    .lang-zh-cn.size-compact #branding,
+    .lang-zh-tw.size-compact #branding,
+    .lang-zh.size-compact #branding {
+        flex-direction: column;
+    }
+    @media (max-width: 350px) {
+        .lang-ja-jp #terms,
+        .lang-lt-lt #terms,
+        .lang-pl-pl #terms,
+        .lang-ro-ro #terms,
+        .lang-ru-ru #terms,
+        .lang-sk-sk #terms,
+        .lang-tl-ph #terms,
+        .lang-uk-ua #terms,
+        .lang-vi-vn #terms {
+            display: flex;
+            flex-direction: column;
+        }
+        .lang-ja-jp #terms .link-spacer,
+        .lang-lt-lt #terms .link-spacer,
+        .lang-pl-pl #terms .link-spacer,
+        .lang-ro-ro #terms .link-spacer,
+        .lang-ru-ru #terms .link-spacer,
+        .lang-sk-sk #terms .link-spacer,
+        .lang-tl-ph #terms .link-spacer,
+        .lang-uk-ua #terms .link-spacer,
+        .lang-vi-vn #terms .link-spacer {
+            display: none;
+        }
+    }
+    .lang-ja-jp.size-compact #terms,
+    .lang-pl-pl.size-compact #terms,
+    .lang-tl-ph.size-compact #terms,
+    .lang-uk-ua.size-compact #terms,
+    .lang-vi-vn.size-compact #terms {
+        display: inline-flex;
+        flex-direction: row;
+    }
+    .lang-ja-jp.size-compact #terms .link-spacer,
+    .lang-pl-pl.size-compact #terms .link-spacer,
+    .lang-tl-ph.size-compact #terms .link-spacer,
+    .lang-uk-ua.size-compact #terms .link-spacer,
+    .lang-vi-vn.size-compact #terms .link-spacer {
+        display: block;
+    }
+    .lang-bg-bg.size-compact #verifying-text,
+    .lang-el-gr.size-compact #verifying-text {
+        font-size: 12px;
+    }
+    .lang-bg-bg.size-compact #challenge-error-text,
+    .lang-bg-bg.size-compact #challenge-overlay,
+    .lang-el-gr.size-compact #challenge-error-text,
+    .lang-el-gr.size-compact #challenge-overlay {
+        font-size: 9px;
+        line-height: 10px;
+    }
+    .lang-bg-bg.size-compact #challenge-error,
+    .lang-el-gr.size-compact #challenge-error {
+        margin: 0 10px;
+    }
+    .lang-bg-bg.size-compact #branding,
+    .lang-el-gr.size-compact #branding {
+        margin: 0 10px 0 0;
+    }
+    .lang-de-de.size-compact #challenge-error-text,
+    .lang-de-de.size-compact #challenge-overlay,
+    .lang-vi-vn.size-compact #challenge-error-text,
+    .lang-vi-vn.size-compact #challenge-overlay {
+        font-size: 9px;
+        line-height: 10px;
+    }
+    .lang-de-de.size-compact #challenge-error,
+    .lang-vi-vn.size-compact #challenge-error {
+        margin: 0 10px;
+    }
+    .lang-de-de.size-compact #branding,
+    .lang-vi-vn.size-compact #branding {
+        margin: 0 10px 0 0;
+    }
+    .lang-de-de #expiry-msg #expired-refresh-link,
+    .lang-de-de #expiry-msg #timeout-refresh-link,
+    .lang-de-de #timeout-msg #expired-refresh-link,
+    .lang-de-de #timeout-msg #timeout-refresh-link,
+    .lang-fi-fi #expiry-msg #expired-refresh-link,
+    .lang-fi-fi #expiry-msg #timeout-refresh-link,
+    .lang-fi-fi #timeout-msg #expired-refresh-link,
+    .lang-fi-fi #timeout-msg #timeout-refresh-link,
+    .lang-fr-fr #expiry-msg #expired-refresh-link,
+    .lang-fr-fr #expiry-msg #timeout-refresh-link,
+    .lang-fr-fr #timeout-msg #expired-refresh-link,
+    .lang-fr-fr #timeout-msg #timeout-refresh-link,
+    .lang-hu-hu #expiry-msg #expired-refresh-link,
+    .lang-hu-hu #expiry-msg #timeout-refresh-link,
+    .lang-hu-hu #timeout-msg #expired-refresh-link,
+    .lang-hu-hu #timeout-msg #timeout-refresh-link,
+    .lang-lt-lt #expiry-msg #expired-refresh-link,
+    .lang-lt-lt #expiry-msg #timeout-refresh-link,
+    .lang-lt-lt #timeout-msg #expired-refresh-link,
+    .lang-lt-lt #timeout-msg #timeout-refresh-link,
+    .lang-ms-my #expiry-msg #expired-refresh-link,
+    .lang-ms-my #expiry-msg #timeout-refresh-link,
+    .lang-ms-my #timeout-msg #expired-refresh-link,
+    .lang-ms-my #timeout-msg #timeout-refresh-link,
+    .lang-ro-ro #expiry-msg #expired-refresh-link,
+    .lang-ro-ro #expiry-msg #timeout-refresh-link,
+    .lang-ro-ro #timeout-msg #expired-refresh-link,
+    .lang-ro-ro #timeout-msg #timeout-refresh-link,
+    .lang-uk-ua #expiry-msg #expired-refresh-link,
+    .lang-uk-ua #expiry-msg #timeout-refresh-link,
+    .lang-uk-ua #timeout-msg #expired-refresh-link,
+    .lang-uk-ua #timeout-msg #timeout-refresh-link {
+        margin-left: 0;
+    }
+    .lang-hr-hr.size-compact #verifying-text,
+    .lang-ms-my.size-compact #verifying-text,
+    .lang-pl-pl.size-compact #verifying-text {
+        font-size: 12px;
+    }
+    @media (max-width: 350px) {
+        .lang-es-es #success-text {
+            font-size: 12px;
+        }
+    }
+    .lang-pl-pl.size-compact #fail {
+        gap: 6px;
+    }
+    .lang-pl-pl.size-compact #fail-text,
+    .lang-pl-pl.size-compact #timeout-refresh-link,
+    .lang-pl-pl.size-compact #timeout-text {
+        font-size: 12px;
+    }
+    .lang-pl-pl.size-compact #terms {
+        display: inline-flex;
+    }
+    .lang-pl-pl.size-compact #terms .link-spacer {
+        display: block;
+    }
+    .lang-ja-jp #expired-text,
+    .lang-ja-jp #timeout-text,
+    .lang-pl-pl #expired-text,
+    .lang-pl-pl #timeout-text,
+    .lang-ro-ro #expired-text,
+    .lang-ro-ro #timeout-text,
+    .lang-tl-ph #expired-text,
+    .lang-tl-ph #timeout-text,
+    .lang-tr-tr #expired-text,
+    .lang-tr-tr #timeout-text,
+    .lang-uk-ua #expired-text,
+    .lang-uk-ua #timeout-text {
+        display: block;
+    }
+    .lang-fi-fi.size-compact #expired,
+    .lang-fi-fi.size-compact #timeout {
+        gap: 6px;
+    }
+    @media (max-width: 350px) {
+        .lang-de-de #terms {
+            display: flex;
+            flex-direction: column;
+        }
+        .lang-de-de #terms .link-spacer {
+            display: none;
+        }
+        .lang-de-de #expired-text,
+        .lang-de-de #expiry-msg,
+        .lang-de-de #timeout-msg,
+        .lang-de-de #timeout-text {
+            font-size: 12px;
+        }
+    }
+    .lang-de-de.size-compact #timeout {
+        gap: 6px;
+        margin-left: 4px;
+    }
+    .lang-de-de.size-compact #timeout-refresh-link,
+    .lang-de-de.size-compact #timeout-text {
+        font-size: 11px;
+    }
+    .lang-de-de.size-compact .cb-lb-t {
+        font-size: 12px;
+    }
+    .lang-ja-jp #branding {
+        display: flex;
+        flex-direction: column;
+        margin: 0 16px 0 0;
+        padding-top: 5px;
+        text-align: right;
+    }
+    .lang-ja-jp .cb-lb-t {
+        font-size: 11px;
+    }
+    .lang-ja-jp.size-compact #challenge-error-text,
+    .lang-ja-jp.size-compact #challenge-overlay {
+        line-height: 10px;
+    }
+    @media (max-width: 350px) {
+        .lang-ru-ru #terms {
+            display: flex;
+            flex-direction: column;
+        }
+        .lang-ru-ru #terms .link-spacer {
+            display: none;
+        }
+    }
+    .lang-ru-ru.size-compact #verifying-text {
+        font-size: 10px;
+    }
+    .lang-ru-ru.size-compact .cb-lb .cb-i,
+    .lang-ru-ru.size-compact .cb-lb input {
+        left: 11px;
+    }
+    .lang-ru-ru.size-compact #challenge-error-text,
+    .lang-ru-ru.size-compact #challenge-overlay {
+        font-size: 8px;
+        line-height: 10px;
+    }
+    .lang-ru-ru #challenge-error {
+        margin: 8px 4px;
+    }
+    .lang-bg-bg.size-compact #verifying-text {
+        font-size: 12px;
+    }
+    .overlay {
+        background-color: #fff;
+        border: 1px solid #de1303;
+        color: #de1303;
+        font-family: consolas, Liberation Mono, courier, monospace;
+        font-size: 8px;
+        height: auto;
+        left: 5px;
+        line-height: 8px;
+        opacity: 0.9;
+        padding: 2px;
+        position: absolute;
+        top: 5px;
+        z-index: 2147483647;
+    }
+    .lang-it-it.size-compact #challenge-error-text,
+    .lang-it-it.size-compact #challenge-overlay {
+        font-size: 9px;
+        line-height: 10px;
+    }
+    .lang-id-id.size-compact #challenge-error-text,
+    .lang-id-id.size-compact #challenge-overlay {
+        line-height: 10px;
+    }
+    @media (prefers-color-scheme: dark) {
+        .main-wrapper.theme-auto,
+        body.theme-auto {
+            background-color: #232323;
+            color: #fff;
+        }
+        .theme-auto #success-i,
+        .theme-auto #success-i .p1 {
+            box-shadow: inset 0 0 0 #0aa937;
+        }
+        .theme-auto .success-circle {
+            stroke: #0aa937;
+            fill: #0aa937;
+        }
+        .theme-auto .expired-circle,
+        .theme-auto .timeout-circle {
+            stroke-dasharray: 166;
+            stroke-dashoffset: 166;
+            stroke-width: 2;
+            stroke-miterlimit: 10;
+            stroke: #999;
+            fill: #999;
+        }
+        .theme-auto #expired-i,
+        .theme-auto #timeout-i {
+            border-radius: 50%;
+            box-shadow: inset 0 0 0 #999;
+            display: flex;
+            height: 30px;
+            width: 30px;
+            stroke-width: 1px;
+            fill: #f8f8f8;
+            stroke: #f8f8f8;
+            stroke-miterlimit: 10;
+        }
+        .theme-auto #challenge-overlay {
+            background-color: #222;
+        }
+        .theme-auto #challenge-error-text,
+        .theme-auto #challenge-overlay {
+            color: #ffa299;
+        }
+        .theme-auto #challenge-error-text a,
+        .theme-auto #challenge-error-text a:link,
+        .theme-auto #challenge-error-text a:visited,
+        .theme-auto #challenge-overlay a,
+        .theme-auto #challenge-overlay a:link,
+        .theme-auto #challenge-overlay a:visited {
+            color: #bbb;
+        }
+        .theme-auto #challenge-error-text a:active,
+        .theme-auto #challenge-error-text a:focus,
+        .theme-auto #challenge-error-text a:hover,
+        .theme-auto #challenge-overlay a:active,
+        .theme-auto #challenge-overlay a:focus,
+        .theme-auto #challenge-overlay a:hover {
+            color: #949494;
+        }
+        .theme-auto .cb-lb .cb-i {
+            background-color: #222;
+            border: 2px solid #dadada;
+        }
+        .theme-auto .cb-lb input:active ~ .cb-i,
+        .theme-auto .cb-lb input:focus ~ .cb-i {
+            border: 2px solid #fbad41;
+        }
+        .theme-auto .cb-lb input:checked ~ .cb-i {
+            background-color: #6d6d6d;
+        }
+        .theme-auto .cb-lb input:checked ~ .cb-i:after {
+            border-color: #fbad41;
+        }
+        .theme-auto h1 {
+            color: #fff;
+        }
+        .theme-auto #challenge-error-title {
+            color: #ffa299;
+        }
+        .theme-auto #challenge-error-title a,
+        .theme-auto #challenge-error-title a:link,
+        .theme-auto #challenge-error-title a:visited {
+            color: #bbb;
+        }
+        .theme-auto #challenge-error-title a:active,
+        .theme-auto #challenge-error-title a:focus,
+        .theme-auto #challenge-error-title a:hover {
+            color: #949494;
+        }
+        .theme-auto #terms {
+            color: #bbb;
+        }
+        .theme-auto #terms a {
+            color: #bbb;
+            white-space: nowrap;
+        }
+        .theme-auto #terms a:link,
+        .theme-auto #terms a:visited {
+            color: #bbb;
+        }
+        .theme-auto #terms a:active,
+        .theme-auto #terms a:focus,
+        .theme-auto #terms a:hover {
+            color: #949494;
+        }
+        .theme-auto #content {
+            background-color: #232323;
+            border-color: #797979;
+        }
+        .theme-auto #qr {
+            fill: #f38020;
+        }
+        .theme-auto .logo-text {
+            fill: #fff;
+        }
+        .theme-auto #fr-helper-loop-link,
+        .theme-auto #fr-helper-loop-link:link,
+        .theme-auto #fr-helper-loop-link:visited {
+            color: #bbb;
+        }
+        .theme-auto #fr-helper-loop-link:active,
+        .theme-auto #fr-helper-loop-link:focus,
+        .theme-auto #fr-helper-loop-link:hover {
+            color: #949494;
+        }
+        .theme-auto #expired-refresh-link,
+        .theme-auto #expired-refresh-link:link,
+        .theme-auto #expired-refresh-link:visited,
+        .theme-auto #timeout-refresh-link,
+        .theme-auto #timeout-refresh-link:link,
+        .theme-auto #timeout-refresh-link:visited {
+            color: #bbb;
+        }
+        .theme-auto #expired-refresh-link:active,
+        .theme-auto #expired-refresh-link:focus,
+        .theme-auto #expired-refresh-link:hover,
+        .theme-auto #timeout-refresh-link:active,
+        .theme-auto #timeout-refresh-link:focus,
+        .theme-auto #timeout-refresh-link:hover {
+            color: #949494;
+        }
+        .theme-auto .overlay {
+            border-color: #ffa299;
+            color: #ffa299;
+        }
+        .theme-auto .error-message,
+        .theme-auto .error-message a,
+        .theme-auto .error-message a:link,
+        .theme-auto .error-message a:visited {
+            color: #ffa299;
+        }
+    }
+</style>
+<div class="main-wrapper .wbWF1 theme-dark size-normal lang-es-es">
+    <div
+        id="content"
+        aria-live="polite"
+        aria-atomic="true"
+        style="display: flex"
+    >
+        <div id="rvwE0" style="display: none"></div>
+        <div
+            id="verifying"
+            class="cb-container"
+            style="display: grid; visibility: visible"
+        >
+            <div class="spinner-container">
+                <svg
+                    id="spinner-i"
+                    viewBox="0 0 30 30"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                >
+                    <line
+                        x1="15"
+                        x2="15"
+                        y1="1.5"
+                        y2="5.5"
+                        class="circle"
+                    ></line>
+                    <line
+                        x1="24.5459"
+                        x2="24.5459"
+                        y1="5.45405"
+                        y2="10.45405"
+                        transform="rotate(45 24.5459 5.45405)"
+                        class="circle"
+                    ></line>
+                    <line
+                        x1="28.5"
+                        x2="28.5"
+                        y1="15"
+                        y2="20"
+                        transform="rotate(90 28.5 15)"
+                        class="circle"
+                    ></line>
+                    <line
+                        x1="24.5459"
+                        x2="24.5459"
+                        y1="24.546"
+                        y2="29.546"
+                        transform="rotate(135 24.5459 24.546)"
+                        class="circle"
+                    ></line>
+                    <line
+                        x1="15"
+                        x2="15"
+                        y1="28.5"
+                        y2="33.5"
+                        transform="rotate(180 15 28.5)"
+                        class="circle"
+                    ></line>
+                    <line
+                        x1="5.4541"
+                        x2="5.4541"
+                        y1="24.5459"
+                        y2="29.5459"
+                        transform="rotate(-135 5.4541 24.5459)"
+                        class="circle"
+                    ></line>
+                    <line
+                        x1="1.5"
+                        x2="1.5"
+                        y1="15"
+                        y2="20"
+                        transform="rotate(-90 1.5 15)"
+                        class="circle"
+                    ></line>
+                    <line
+                        x1="5.45408"
+                        x2="5.45408"
+                        y1="5.45404"
+                        y2="10.45404"
+                        transform="rotate(-45 5.45408 5.45404)"
+                        class="circle"
+                    ></line>
+                </svg>
+            </div>
+            <div id="verifying-msg">
+                <span id="verifying-text">Verificando...</span><br />
+                <div
+                    id="error-overrun"
+                    class="error-message"
+                    style="display: inline-block; visibility: visible"
+                >
+                    <span id="fr-overrun">Stuck here?</span
+                    ><a href="#refresh" id="fr-overrun-link">Send Feedback</a>
+                </div>
+            </div>
+        </div>
+        <div
+            id="success"
+            class="cb-container"
+            role="alert"
+            style="display: none"
+        >
+            <svg id="success-pre-i" viewBox="0 0 30 30">
+                <g>
+                    <line x1="15" x2="15" y1="7.5" y2="0"></line>
+                    <line x1="20.303" x2="23.787" y1="9.697" y2="5.303"></line>
+                    <line x1="22.5" x2="30" y1="15" y2="15"></line>
+                    <line
+                        x1="20.303"
+                        x2="23.787"
+                        y1="20.303"
+                        y2="24.697"
+                    ></line>
+                    <line x1="15" x2="15" y1="22.5" y2="30"></line>
+                    <line x1="9.697" x2="5.303" y1="20.303" y2="23.787"></line>
+                    <line x1="7.5" x2="0" y1="15" y2="15"></line>
+                    <line x1="9.697" x2="5.303" y1="9.697" y2="5.303"></line>
+                </g></svg
+            ><svg
+                id="success-i"
+                viewBox="0 0 52 52"
+                aria-hidden="true"
+                style="display: none"
+            >
+                <circle class="success-circle" cx="26" cy="26" r="25"></circle>
+                <path class="p1" d="m13,26l9.37,9l17.63,-18"></path></svg
+            ><span id="success-text">¡Operación exitosa!</span>
+        </div>
+        <div id="fail" class="cb-container" role="alert" style="display: none">
+            <svg id="fail-i" viewBox="0 0 30 30" aria-hidden="true" fill="none">
+                <circle
+                    class="failure-circle"
+                    cx="15"
+                    cy="15"
+                    r="15"
+                    fill="none"
+                ></circle>
+                <path
+                    class="failure-cross"
+                    d="M15.9288 16.2308H13.4273L13.073 7H16.2832L15.9288 16.2308ZM14.6781 19.1636C15.1853 19.1636 15.5918 19.3129 15.8976 19.6117C16.2103 19.9105 16.3666 20.2927 16.3666 20.7583C16.3666 21.2169 16.2103 21.5956 15.8976 21.8944C15.5918 22.1932 15.1853 22.3425 14.6781 22.3425C14.1778 22.3425 13.7713 22.1932 13.4586 21.8944C13.1529 21.5956 13 21.2169 13 20.7583C13 20.2997 13.1529 19.921 13.4586 19.6222C13.7713 19.3164 14.1778 19.1636 14.6781 19.1636Z"
+                ></path>
+            </svg>
+            <div id="failure-msg">
+                <span id="fail-text">¡Error!</span>
+                <div id="having-trouble-message" class="error-message">
+                    <span id="fr-helper">¿Está experimentando problemas?</span
+                    ><a href="#refresh" id="fr-helper-link">Send Feedback</a>
+                </div>
+            </div>
+        </div>
+        <div
+            id="expired"
+            class="cb-container"
+            role="alert"
+            style="display: none"
+        >
+            <svg id="expired-i" viewBox="0 0 30 30" aria-hidden="true">
+                <circle class="expired-circle" cx="15" cy="15" r="15"></circle>
+                <path
+                    class="expired-p1"
+                    d="M15.3125 6H13V16.7184L19.2438 23.2108L20.9088 21.6094L15.3125 15.7877V6Z"
+                ></path>
+            </svg>
+            <div id="expiry-msg">
+                <p id="expired-text">
+                    Expirado<span id="full-stop-expired-text">. </span
+                    ><a href="#refresh" id="expired-refresh-link">Actualizar</a>
+                </p>
+            </div>
+        </div>
+        <div
+            id="timeout"
+            class="cb-container"
+            role="alert"
+            style="display: none"
+        >
+            <svg id="timeout-i" viewBox="0 0 30 30" aria-hidden="true">
+                <circle class="timeout-circle" cx="15" cy="15" r="15"></circle>
+                <path
+                    class="timeout-p1"
+                    d="M15.3125 6H13V16.7184L19.2438 23.2108L20.9088 21.6094L15.3125 15.7877V6Z"
+                ></path>
+            </svg>
+            <div id="timeout-msg">
+                <p id="timeout-text">
+                    Tiempo excedido<span id="full-stop-timeout-text">. </span
+                    ><a href="#refresh" id="timeout-refresh-link">Actualizar</a>
+                </p>
+            </div>
+        </div>
+        <div
+            id="challenge-error"
+            class="cb-container error-message-wrapper"
+            role="alert"
+            style="display: none"
+        >
+            <span id="challenge-error-text" class="error-message"></span>
+        </div>
+        <div id="branding">
+            <a
+                class="cf-link"
+                target="_blank"
+                href="https://www.cloudflare.com/products/turnstile/?utm_source=turnstile&amp;utm_campaign=widget"
+                rel="noopener noreferrer"
+                ><svg
+                    role="img"
+                    aria-label="Cloudflare"
+                    id="logo"
+                    viewBox="0 0 73 25"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                >
+                    <path
+                        d="M61.8848 15.7841L62.0632 15.1578C62.2758 14.4126 62.1967 13.7239 61.8401 13.2178C61.5118 12.7517 60.9649 12.4773 60.3007 12.4453L47.7201 12.2836C47.6811 12.2829 47.6428 12.2728 47.6083 12.2542C47.5738 12.2356 47.5442 12.209 47.5217 12.1766C47.4996 12.1431 47.4856 12.1049 47.4807 12.0649C47.4758 12.025 47.4801 11.9844 47.4933 11.9465C47.5149 11.8839 47.5541 11.8291 47.6061 11.7888C47.658 11.7486 47.7204 11.7247 47.7856 11.72L60.4827 11.5566C61.9889 11.4864 63.6196 10.2462 64.1905 8.73372L64.9146 6.81361C64.9443 6.73242 64.951 6.64444 64.9341 6.55957C64.112 2.80652 60.8115 0 56.8652 0C53.2293 0 50.1421 2.38158 49.0347 5.69186C48.2864 5.12186 47.3535 4.85982 46.4228 4.95823C44.6785 5.13401 43.276 6.55928 43.1034 8.32979C43.059 8.77189 43.0915 9.21845 43.1992 9.64918C40.3497 9.73347 38.0645 12.1027 38.0645 15.0151C38.0649 15.2751 38.0838 15.5347 38.1212 15.7919C38.1294 15.8513 38.1584 15.9057 38.2029 15.9452C38.2474 15.9847 38.3044 16.0067 38.3635 16.0071L61.5894 16.0099C61.5916 16.0101 61.5938 16.0101 61.596 16.0099C61.6616 16.0088 61.7252 15.9862 61.7772 15.9455C61.8293 15.9049 61.867 15.8483 61.8848 15.7841Z"
+                        fill="#F6821F"
+                    ></path>
+                    <path
+                        d="M66.0758 6.95285C65.9592 6.95285 65.843 6.95582 65.7274 6.96177C65.7087 6.96312 65.6904 6.96719 65.6729 6.97385C65.6426 6.98437 65.6152 7.00219 65.5931 7.02579C65.5711 7.04939 65.555 7.07806 65.5462 7.10936L65.0515 8.84333C64.8389 9.58847 64.918 10.2766 65.2749 10.7827C65.6029 11.2494 66.1498 11.5233 66.814 11.5552L69.4959 11.7186C69.5336 11.7199 69.5705 11.73 69.6037 11.7483C69.6369 11.7666 69.6654 11.7925 69.687 11.8239C69.7092 11.8576 69.7234 11.896 69.7283 11.9363C69.7332 11.9765 69.7288 12.0173 69.7153 12.0555C69.6937 12.118 69.6546 12.1727 69.6028 12.2129C69.5509 12.2531 69.4887 12.2771 69.4236 12.2819L66.6371 12.4453C65.1241 12.5161 63.4937 13.7558 62.9233 15.2682L62.722 15.8022C62.7136 15.8245 62.7105 15.8486 62.713 15.8724C62.7155 15.8961 62.7236 15.9189 62.7365 15.9389C62.7495 15.9589 62.7669 15.9755 62.7874 15.9873C62.8079 15.9991 62.8309 16.0058 62.8544 16.0068C62.8569 16.0068 62.8592 16.0068 62.8618 16.0068H72.4502C72.506 16.0073 72.5604 15.9893 72.6051 15.9554C72.6498 15.9216 72.6823 15.8739 72.6977 15.8195C72.8677 15.2043 72.9535 14.5684 72.9529 13.9296C72.9517 10.0767 69.8732 6.95285 66.0758 6.95285Z"
+                        fill="#FBAD41"
+                    ></path>
+                    <path
+                        d="M8.11963 18.8904H9.75541V23.4254H12.6139V24.8798H8.11963V18.8904Z"
+                        class="logo-text"
+                    ></path>
+                    <path
+                        d="M14.3081 21.9023V21.8853C14.3081 20.1655 15.674 18.7704 17.4952 18.7704C19.3164 18.7704 20.6653 20.1482 20.6653 21.8681V21.8853C20.6653 23.6052 19.2991 24.9994 17.4785 24.9994C15.6578 24.9994 14.3081 23.6222 14.3081 21.9023ZM18.9958 21.9023V21.8853C18.9958 21.0222 18.3806 20.2679 17.4785 20.2679C16.5846 20.2679 15.9858 21.0038 15.9858 21.8681V21.8853C15.9858 22.7484 16.6013 23.5025 17.4952 23.5025C18.3973 23.5025 18.9958 22.7666 18.9958 21.9023Z"
+                        class="logo-text"
+                    ></path>
+                    <path
+                        d="M22.6674 22.253V18.8901H24.3284V22.2191C24.3284 23.0822 24.7584 23.4939 25.4159 23.4939C26.0733 23.4939 26.5034 23.1003 26.5034 22.2617V18.8901H28.1647V22.2093C28.1647 24.1432 27.0772 24.9899 25.3991 24.9899C23.7211 24.9899 22.6674 24.1268 22.6674 22.2522"
+                        class="logo-text"
+                    ></path>
+                    <path
+                        d="M30.668 18.8907H32.9445C35.0526 18.8907 36.275 20.1226 36.275 21.8508V21.8684C36.275 23.5963 35.0355 24.88 32.911 24.88H30.668V18.8907ZM32.97 23.4076C33.9483 23.4076 34.597 22.8609 34.597 21.8928V21.8759C34.597 20.9178 33.9483 20.3614 32.97 20.3614H32.3038V23.4082L32.97 23.4076Z"
+                        class="logo-text"
+                    ></path>
+                    <path
+                        d="M38.6525 18.8904H43.3738V20.3453H40.2883V21.3632H43.079V22.7407H40.2883V24.8798H38.6525V18.8904Z"
+                        class="logo-text"
+                    ></path>
+                    <path
+                        d="M45.65 18.8904H47.2858V23.4254H50.1443V24.8798H45.65V18.8904Z"
+                        class="logo-text"
+                    ></path>
+                    <path
+                        d="M54.4187 18.8475H55.9949L58.5079 24.8797H56.7541L56.3238 23.8101H54.047L53.6257 24.8797H51.9058L54.4187 18.8475ZM55.8518 22.5183L55.1941 20.8154L54.5278 22.5183H55.8518Z"
+                        class="logo-text"
+                    ></path>
+                    <path
+                        d="M60.6149 18.8901H63.4056C64.3083 18.8901 64.9317 19.13 65.328 19.5406C65.6742 19.883 65.8511 20.3462 65.8511 20.9357V20.9526C65.8511 21.8678 65.3691 22.4754 64.6369 22.7919L66.045 24.88H64.1558L62.9671 23.0658H62.2507V24.88H60.6149V18.8901ZM63.3299 21.7654C63.8864 21.7654 64.2071 21.4915 64.2071 21.0551V21.0381C64.2071 20.5674 63.8697 20.328 63.3211 20.328H62.2507V21.7665L63.3299 21.7654Z"
+                        class="logo-text"
+                    ></path>
+                    <path
+                        d="M68.2112 18.8904H72.9578V20.3024H69.8302V21.209H72.6632V22.5183H69.8302V23.4683H73V24.8798H68.2112V18.8904Z"
+                        class="logo-text"
+                    ></path>
+                    <path
+                        d="M4.53824 22.6043C4.30918 23.13 3.82723 23.5022 3.18681 23.5022C2.29265 23.5022 1.67746 22.7493 1.67746 21.8851V21.8678C1.67746 21.0047 2.27593 20.2676 3.1698 20.2676C3.84367 20.2676 4.35681 20.6882 4.5734 21.2605H6.29764C6.02151 19.8349 4.78716 18.7707 3.18681 18.7707C1.36533 18.7707 0 20.1666 0 21.8851V21.9021C0 23.6219 1.3486 25 3.1698 25C4.72762 25 5.94525 23.9764 6.26645 22.6046L4.53824 22.6043Z"
+                        class="logo-text"
+                    ></path></svg
+            ></a>
+            <div id="terms">
+                <a
+                    id="privacy-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href="https://www.cloudflare.com/es-es/privacypolicy/"
+                    >Privacidad</a
+                ><span class="link-spacer"> • </span
+                ><a
+                    id="terms-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href="https://www.cloudflare.com/es-es/website-terms/"
+                    >Términos</a
+                >
+            </div>
+        </div>
+    </div>
+</div>
+<div>
+    <div
+        style="
+            height: 100vh;
+            width: 100vw;
+            position: absolute;
+            left: -10000px;
+            visibility: hidden;
+        "
+    >
+        <iframe></iframe>
+    </div>
+</div>
+'
