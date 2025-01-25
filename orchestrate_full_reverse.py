@@ -6,20 +6,19 @@ import typing
 import random
 import string
 import execjs
-from javascript import require
-#from aqua import CF_Solver
-#from storage_orchestrate import set_orchestrate_data, get_orchestrate_data
+from javascript import require, globalThis
+
 
 jsdom = require('jsdom')
 vm = require('vm')
-node_fetch = require('node-fetch')
 node_atob = require('atob')
-#node_worker = require('web-worker')
+jsdom_worker = require('jsdom-worker')
+node_fetch = require('node-fetch').default
 
 PATH = 'cloudflare-data/orchestrate.json'
 reversed_funcs = execjs.compile(open('cf_reversed_funcs.js', 'r').read())
+reverse_utility = execjs.compile(open('_reverse_utility.js', 'r').read())
 
-cK = 'b'
 
 class ReversedObjects:
     unknown_array: dict[str, int] = None
@@ -31,8 +30,10 @@ class ReversedObjects:
         'other': [],
         '_setTimeout': []
     }
+    decrypt_values: dict[str, typing.Any] = {}
     initialized_onload: bool = False
     decrypt_presicion: float = 255
+    onload_challenge = None
 
 class VM_Automation:
     def __init__(self, domain, userAgent, cf_html=False, html_code=None):
@@ -43,6 +44,9 @@ class VM_Automation:
         self.ov1_contentType = 'application/x-www-form-urlencoded'
         self.html_code = html_code
 
+        virtualConsole = jsdom.VirtualConsole()
+        virtualConsole.on("error", lambda: ());
+
         self.window = jsdom.JSDOM(self._cf_create_html(cf_html, html_code), {
             'url': self.domain,
             'referrer': self.domain + '/',
@@ -51,6 +55,7 @@ class VM_Automation:
             'pretendToBeVisual': True,
             'storageQuota': 10000000,
             'runScripts': 'dangerously',
+            #'virtualConsole': virtualConsole,
             'resources': self.resource_loader
         }).getInternalVMContext()
 
@@ -64,111 +69,109 @@ class VM_Automation:
             (1366,768,1366,738),
             (1920,1080,1920,1050)
         )
+
         self._initialize_window()
 
     def _initialize_window(self) -> None:
         o_height, o_width, i_width, i_height = random.choice(list(self.resolutions))
 
         self.window.devicePixelRatio = random.uniform(1.2, 1.9)
-        self.window.innerHeight = i_height
-        self.window.innerWidth = i_width
-        self.window.outerHeight = o_height
-        self.window.outerWidth = o_width
+        self.window.innerHeight = 65
+        self.window.innerWidth = 300
+        self.window.outerHeight = 987
+        self.window.outerWidth = 524
 
         self.window.origin = 'https://challenges.cloudflare.com'
         self.window.originAgentCluster = False
         self.window.orientation = 0
         self.window.isSecureContext = True
+        self.window.fetch = node_fetch
+        self.window.atob = node_atob
+        self.window.Worker = globalThis.Worker
+        globalThis.FileReader = self.window.window.FileReader
 
-        self.window.clientInformation = {
-            'appCodeName': 'Mozilla',
-            'appName': 'Netscape',
-            'appVersion': self.userAgent.replace('Mozilla ', ''),
-            'cookieEnabled': True,
-            'contacts': {},
-            'credentials': {},
-            'deviceMemory': (1 << random.randint(1, 4)),
-            'doNotTrack': None,
-            'ink': {},
-            'maxTouchPoints': 2,
-            'keyboard': {},
-            'locks': {},
-            'hardwareConcurrency': 8,
-            'mimeTypes': {'length': 0},
-            'ml': {},
-            'bluetooth': {'onadvertisementreceived': None},
-            'clipboard': {},
-            'connection': {
-                'downLink': 3.45,
-                'downLinkMax': 100,
-                'effectiveType': random.choice(['4g', 'hg', '3g']),
-                'onchange': None,
-                'ontypechange': None,
-                'rtt': 150,
-                'saveData': True,
-                'type': 'cellular'
-            },
-            'geolocation': {},
-            'gpu': {'wgslLanguageFeatures': {'size': 0}},
-            'devicePosture': {
-                'onchange': None,
-                'type': 'continuous'
-            },
-            'mediaCapabilities': {},
-            'mediaDevices': {},
+        self.window.URL = vm.Script('URL').runInThisContext()
+        self.window.stuffed_html = open('cloudflare-data/stuffed.html', 'r').read()
 
-            'mediaSession': {'metadata': None, 'playbackState': 'none'},
-            'plugins': {'length': 0, 'refresh': None},
-            'scheduling': {},
-            'usb': {'onconnect': None, 'ondisconnect': None},
-            'wakeLock': {},
-            'webkitPersistentStorage': {},
-            'webkitTemporaryStorage': {},
-            'onLine': True,
-            'pdfViewerEnabled': False,
-            'permissions': {},
-            'platform': 'Linux armv81',
-            'product': 'Gecko',
-            'productSub': '20030107',
-            'serviceWorker': {
-                'controller': None,
-                'oncontrollerchange': None,
-                'onmessage': None,
-                'onmessageerror': None,
-                'ready': None
-            },
-            'storage': {'onquotachange': None},
-            'storageBuckets': {},
-            'userActivation': {
-                'hasBeenActive': True,
-                'isActive': False
-            },
-            'managed': {'onmanagedconfigurationchange': None},
-            'presentation': {'defaultRequest': None, 'receiver': None},
-            'virtualKeyboard': {}, # <= unknown keyboard
-            'xr': {'ondevicechange': None},
-            'userAgent': self.userAgent,
-            'userAgentData': {
-                'brands': [
-                    {'brand': 'Not-A.Brand', 'version': '99'},
-                    {'brand': 'Chromium', 'version': '124'}
-                ],
-                'mobile': True,
-                'platform': 'Linux'
-            },
-            'webdriver': False,
-            'vendor': 'Google Inc.',
-            'vendorSub': ''
+        # cloueflare turnstile onload
+        vm.Script(open('_window.js', 'r').read()).runInContext(self.window)
+        vm.Script('''
+        window.lt = function(e) {
+            return e > 0 && e < 36e4;
         }
+        window.It = function (e) {
+            var r =
+                arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : 3;
+            return e.length > r ? e.substring(0, r) : e;
+        };
+        window.vr = function(e) {
+            if (!e) return "-";
+            var r = function (n, o) {
+                if (!n || n.tagName === "BODY") return o;
+                for (var c = 1, u = n.previousElementSibling; u; )
+                    u.tagName === n.tagName && c++, (u = u.previousElementSibling);
+                var g = window.It(n.tagName.toLowerCase()),
+                    h = "".concat(g, "[").concat(c, "]");
+                return r(n.parentNode, "/".concat(h).concat(o));
+            };
+            return r(e, "");
+        }
+        window.mr = function(e, r, n) {
+            for (
+                var o = "",
+                    c = 0,
+                    u = document.createNodeIterator(
+                        e,
+                        NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+                        {
+                            acceptNode: function (I) {
+                                return c > r || o.length > n
+                                    ? NodeFilter.FILTER_REJECT
+                                    : NodeFilter.FILTER_ACCEPT;
+                            },
+                        }
+                    ),
+                    g;
+                (g = u.nextNode()) !== null && o.length < n;
+
+            ) {
+                if (g.nodeType === Node.ELEMENT_NODE) {
+                    var h = g;
+                    o += "".concat(window.It(h.tagName.toLowerCase()));
+                    for (var l = 0; l < h.attributes.length; l++) {
+                        var p = h.attributes[l];
+                        o += "_".concat(window.It(p.name, 2));
+                    }
+                    o += ">";
+                } else g.nodeType === Node.TEXT_NODE && (o += "-t");
+                var E = g.parentNode;
+                for (c = 0; E !== e && E !== null; ) c++, (E = E.parentNode);
+            }
+            return o.substring(0, n);
+        }
+        window.gr = function(e) {
+            if (typeof e != "string")
+                throw new Error(
+                    "djb2: expected string, got ".concat(
+                        typeof e == "undefined" ? "undefined" : F(e)
+                    )
+                );
+            for (var r = 5381, n = 0; n < e.length; n++) {
+                var o = e.charCodeAt(n);
+                r = (r * 33) ^ o;
+            }
+            return r >>> 0;
+        }
+
+        window.mockPerformance('navigation', 'navigation', '_domain')
+        '''.replace('_domain', self.domain)).runInContext(self.window)
+
+        vm.Script('clientNavigator("_ua")'.replace('_ua', self.userAgent)).runInContext(self.window)
 
     def _cf_create_html(self, html, code) -> str:
         if html:
             if code is not None:
                 return code
-            # for cf_clearance
-            #ray = ClearanceBase.cf_ray
-            #timestamp = ClearanceBase.encoded_timestamp
-
             with open('cloudflare-data/clearance_base.html', 'r') as f:
                 html_code = f.read()#.replace('CF_RAY', ray).replace('TIMESTAMP', timestamp)
             return html_code
@@ -182,11 +185,23 @@ class VM_Automation:
             return code.split('//-')[1].split('//+')[0]
         elif func_name == 'iden':
             return code.split('//@')[1].split('//$')[0]
+        elif func_name == 'errorl':
+            return code.split('//errl')[1].split('//lolerr')[0]
+        elif func_name == 'unknown_decryp':
+            return code.split('//unk_decryp')[1].split('//decryp_fin')[0]
 
-    def send_ov1_request(self, flowUrl, flowToken, cfChallenge, cfRay, referrer) -> str:
-        self.window.fetch = node_fetch
+    def send_ov1_request(
+        self, 
+        flowUrl, 
+        flowToken, 
+        cfChallenge, 
+        cfRay, 
+        referrer, 
+        decrypter
+    ) -> str:
         print('cloudflare challenge URL:\033[36m', flowUrl, '\033[0m')
-        print('request payload:', f'v_{cfRay}={flowToken[:80]}....')
+        print('request payload:', f'v_{cfRay}={flowToken[:100]}....')
+        print(len(flowToken))
 
         vm.Script(self.get_reversed_func()).runInContext(self.window) 
         vm.Script('''
@@ -239,19 +254,29 @@ class VM_Automation:
         wait("url", "encrypted", "_challenge", "_ray")
         '''.replace('url', flowUrl).replace('encrypted', flowToken).replace('_challenge', cfChallenge).replace('_ray', cfRay)).runInContext(self.window))
         print('cloudflare response:\033[32m', result['encrypted'][:100]+'....', '\033[0m')
+        #print(result['encrypted'][:100])
 
         if not result['success']:
             raise TypeError(f'Cloudflare Challenge Failed ({result["encrypted"]})')
-        window_decrypted = self.decrypt_response(result['encrypted'], cfRay)
+        window_decrypted = decrypter(result['encrypted'], cfRay)
 
-        #if 'challenges' in flowUrl:
-        #    open('cloudflare-data/decrypted.js', 'w').write(window_decrypted)
-        print('decrypted:', window_decrypted[:90])
+        if 'challenges' in flowUrl:
+            open('cloudflare-data/decrypted.js', 'w').write(window_decrypted)
+        #print('decrypted:', window_decrypted[:90])
         #sys.exit()
         return window_decrypted
 
     @staticmethod
-    def analyze_obf(number, f_less, obf_code, obf_number, parseint_gen, parentesis, _return_c=False, split_type='~') -> str:
+    def analyze_obf(
+        number, 
+        f_less, 
+        obf_code, 
+        obf_number, 
+        parseint_gen, 
+        parentesis, 
+        _return_c=False, 
+        split_type='~'
+    ) -> str:
         codee = '''
         for (
             gF = b,
@@ -295,16 +320,17 @@ class VM_Automation:
         if _return_c:
             return codee
         vm.Script(codee).runInThisContext()
-        result = vm.Script('b(Number(NUMBER))'.replace('NUMBER', str(number))).runInThisContext()
+        result = vm.Script('b(Number(NUMBER))'.replace('NUMBER', str(number)).split(')')[0] + '))').runInThisContext()
+        print(number, result)
         return result
 
     def reverse_website_identifier(self, _return_c=False) -> dict[typing.Union[int, str], typing.Any]:
         vm.Script(self.get_reversed_func('iden')).runInContext(self.window)
         codee = '''
         function ffEge(D, E, F, G) {
-            if (E === null || E === void 0)
-                return G;
-            
+            //if (E === null || E === void 0)
+            //    return G;
+
             for (
                 I = y(E),
                 D.Object.getOwnPropertyNames && (I = I.concat(Object.getOwnPropertyNames(E))),
@@ -356,54 +382,44 @@ class VM_Automation:
         result = str(vm.Script('B()').runInContext(self.window))
         return result
 
-    def decrypt_response(self, response, cf_ray) -> str:
-        self.window.custom_atob = node_atob
-
-        vm.Script('''
-        var eO = function(f, r, m) {
-            const _add = (l, m) => l + m;
-            const _subtract = (l, m) => l - m;
-
-            for (
-                m,
-                j = 32,
-                l = r + '_' + 0,
-                l = l.replace(/./g, function(n, s) {
-                    j ^= l.charCodeAt(s)
-                }),
-                f = window.custom_atob(f),
-                k = [],
-                i = -1;
-                !isNaN(m = f.charCodeAt(++i));
-                k.push(String.fromCharCode(_add(_subtract((presicion & m) - j, i % 65535), 65535) % 255))
-            );
-            return k.join('')
-        }
-        '''.replace('presicion', str(ReversedObjects.decrypt_presicion))).runInContext(self.window)
-        result = vm.Script('eO("resp", "ray")'.replace('resp', response).replace("ray", cf_ray)).runInContext(self.window)
-        return result
-
-    def undefined(self, array) -> str:
-        vm.Script('''
-        var modified = {};
-        var i = () => undefined;
-
-        Object.entries(_array).forEach(([k, v]) => {
-            if (v === 'undefined') {
-                v = i();
-            }
-            modified[k] = v
-        })
-        '''.replace('_array', array)).runInThisContext()
-        result = vm.Script('JSON.stringify(modified)').runInThisContext()
-        return result
-
     def onload_postMessage(self, code, data: dict[str, typing.Any]):
         vm.Script(code).runInContext(self.window)
         vm.Script('window.parent.postMessage(__, "*")'.replace('__', json.dumps(data))).runInContext(self.window)
 
+    def emulate_decryption(self, response, binteractive, obf_functions, **kwargs):
+        self.window._cf_chl_opt = ReversedObjects.cf_chl_opt
+        self.window.TextEncoder = vm.Script('TextEncoder').runInThisContext()
+
+        vm.Script(VM_Automation.analyze_obf(number=None, **kwargs, _return_c=True, split_type='~')).runInContext(self.window)
+        vm.Script('''
+        eM = window
+        eN = window.document
+        console.log(window._cf_chl_opt)
+        var gF = (number) => b(number);'''
+        ).runInContext(self.window)
+
+        for function in obf_functions:
+            vm.Script(function).runInContext(self.window)
+            print('success')
+        vm.Script(
+        '''
+        function fC(c,d,e,hY,f,m,n,o,g,h,i,j,k){if(hY = (number) => b(number),console.log(c, d, e),f={'AUoUw':function(l){return l()},'QzoIe':function(l,m){return l(m)},'XUZXq':function(l,m,n,o){return l(m,n,o)},'FneDN':function(l,m){return m*l},'UQRfq':function(l,m){return l+m},'MFNPN':hY(835),'yizRw':function(l,m){return m===l},'KBLXR':function(l,m){return l+m},'QOwBS':hY(870),'YHfVL':hY(570),'LVAwF':hY(603),'yqXGN':hY(1075),'riSlD':hY(633),'olEzU':hY(175),'YzGfF':function(l,m){return m!=l},'QMyNP':function(l,m){return m===l},'PCTSq':function(l,m){return l===m},'Qdgwt':hY(972),'KucHW':function(l,m,n){return l(m,n)},'akrwS':hY(518),'RkTNJ':hY(724),'eLheY':hY(1016),'TzyBl':hY(844)},e=e||0,f[hY(153)](fF,hY(956))||e>=3){if(hY(518)===f[hY(697)])return void eM[hY(609)]();else m=f[hY(270)](k),n=l[hY(273)](f[hY(153)](m,m)),n(n)&&(n=0),f[hY(933)](o,m,n+1,1),o=f[hY(763)](1e3,s[hY(1236)][hY(400)](2.32<<n,32)),v[hY(1244)](function(hZ){hZ=hY,m[hZ(513)][hZ(434)]()},o)}if(g=![],h=function(i0){if(i0=hY,i0(435)===f[i0(1256)])return f[i0(722)].cK&&g[i0(722)].cK[i0(1096)](h)!==-1;else{if(g)return;g=!![],eM[i0(1244)](function(i1){i1=i0,fB++,f[i1(933)](fC,c,d,f[i1(184)](e,1))},250*(e+1))}},i=new eM[(hY(292))](),!i)return;j=hY(665),i[hY(350)](j,c,!![]),i[hY(217)]=f[hY(763)](5e3,f[hY(184)](1,e)),i[hY(1267)]=function(i2){i2=hY,f[i2(270)](h)},i[hY(1101)](hY(1055),hY(913)),i[hY(1101)](f[hY(1268)],eM[hY(722)].cH),i[hY(1101)](f[hY(408)],fB),i[hY(1005)]=function(i3,C,m,n,o,s,v,x,F,G){if(i3=hY,i3(633)!==f[i3(418)])C=i+i3(612),!j[i3(209)][i3(1026)](i3(431))&&(f[i3(271)](k[i3(513)][i3(766)],i3(1003))||l[i3(931)]&&!m())&&(C+=i3(1137)),n[i3(993)]=C;else{if(m=f[i3(387)],f[i3(266)](i[i3(1248)],4))return;(n=this[i3(978)](i3(1132)),n===i3(460))&&(o=JSON[i3(1150)](i[i3(890)]),o[i3(279)]&&(m=o[i3(279)]));if(s=f[i3(153)](fN,m),s){if(i3(1001)!==i3(1001))throw this.h[this.h[60^this.g][3]^f[i3(508)](this.h[this.g^60.08][1][i3(1149)](this.h[60.29^this.g][0]++)-232,256)&255.48^153^this.g];else fP(s)}if(i[i3(182)]===400)return f[i3(582)](i3(720),i3(575))?void 0:void eM[i3(609)]();if(i[i3(182)]!=200&&i[i3(182)]!=304)return void h();if(v=eO(i[i3(890)]),v[i3(377)](i3(386)))new eM[(i3(286))](v)(d,fC);else if(x=fi(v),f[i3(707)](typeof x,i3(1062))){if(f[i3(588)]===f[i3(588)])f[i3(1247)](x,d,fC);else return F=l(i3(1189)),m=n[i3(1200)](f[i3(706)]),o[i3(289)]=f[i3(1036)],s[i3(948)][i3(1181)]=i3(505),G=v[i3(1200)](i3(444)),G[i3(1098)]=f[i3(1160)],G[i3(323)]=F,G[i3(1081)][i3(618)](f[i3(473)]),x[i3(616)](G),B()[i3(616)](C),G}}},k=eP[hY(395)](JSON[hY(483)](d))[hY(1130)]('+',f[hY(185)]),i[hY(1120)](f[hY(508)]('v_',eM[hY(722)][hY(624)])+'='+k)}
+        B = notdecrypted("resp")
+        console.log('kakakak', B)
+        B(chl_inter, fC)
+        '''.replace('resp', response).replace('chl_inter', binteractive)).runInContext(self.window)
+        sys.exit()
+
     @staticmethod
-    def encrypt_flow_data(data, turnkey, enc_code, obf_v, operators, split_type='~', **kwargs) -> str:
+    def encrypt_flow_data(
+        data, 
+        turnkey, 
+        enc_code, 
+        obf_v, 
+        operators, 
+        split_type='~', 
+        **kwargs
+    ) -> str:
         vm.Script(VM_Automation.analyze_obf(number=None, **kwargs, _return_c=True, split_type=split_type)).runInThisContext()
         vm.Script('var fi = (number) => b(Number(number))'.replace('fi', obf_v)).runInThisContext()
         vm.Script(operators).runInThisContext()
@@ -419,6 +435,13 @@ class VM_Automation:
         result = vm.Script("h('_payload', '_turnkey')".replace('_payload', data).replace('_turnkey', turnkey)).runInThisContext()
         return result
 
+    def decrypt_response(response, func, **kwargs):
+        vm.Script(VM_Automation.analyze_obf(number=None, **kwargs, _return_c=True)).runInThisContext()
+        vm.Script('var gF = (number) => b(Number(number))').runInThisContext()
+        vm.Script(func).runInThisContext()
+        result = vm.Script(f'decrypt_response("{response}")').runInThisContext()
+        return result
+
     def evaluate(
         self,
         code: str, 
@@ -426,98 +449,195 @@ class VM_Automation:
         flow_auto: bool = False,
         previous_data: dict[str, typing.Any] = None
     ) -> dict[str, typing.Any]:
-        sendRequest = lambda arg1, arg2: ''
+        #sendRequest = lambda arg1, arg2: print(arg1, arg2)
+
 
         self.window.decryptedChl = decryptedChl
         self.window._cf_chl_opt = ReversedObjects.cf_chl_opt
-        self.window.sendRequest = sendRequest
+        #self.window.sendRequest = sendRequest
+
+        if flow_auto:
+            shd = code.split(".mode === 'closed'")[0]
+            shdow = shd[len(shd) - 40:len(shd)].split('window._cf_chl_opt.')[1]
+            ReversedObjects.chl_opt_keys['what_hello']['fragment'] = shdow
+
         self.window._o_k = ReversedObjects.chl_opt_keys['what_hello']
         self.window._o_s = ReversedObjects.chl_opt_keys['_setTimeout']
+        self.window.vm_script = vm
         
         _0xL = self.window._o_k['fragment']
 
         # why jsdom doesnt have Blob, URL and TextEncoder?
-        self.window.Blob = vm.Script('Blob').runInThisContext()
-        self.window.URL = vm.Script('URL').runInThisContext()
+        #self.window.Blob = vm.Script('Blob').runInThisContext()
+        #self.window.URL = vm.Script('URL').runInThisContext()
         self.window.TextEncoder = vm.Script('TextEncoder').runInThisContext()
-        #self.window.Worker = node_worker
-
-        #print(ReversedObjects.chl_opt_keys)
+        self.window._performance = vm.Script('performance').runInThisContext()
 
         def _parse_window_eval():
             nonlocal code
 
-            t = code.split(".screen.orientation,'so.',")[1].split('var d={};d=')[1].split('(')[0]
-            code = code.replace(t, 'ffEge')
+            if flow_auto:
+                if "contentWindow.screen.orientation,'so.'" in code:
+                    t = code.split(".screen.orientation,'so.',")[1].split('var d={};d=')[1].split('(')[0]
+                    code = code.replace(t, 'ffEge')
+                    code = code.replace(",c=ffEge(b,a.contentWindow.screen.orientation,'so.',c)", '')
+                    unknown_func = code.split(",window,'',d),")[1].split('(')[0]
+                else:
+                    unknown_func = 'UNKNOWN_1209'
 
-        if flow_auto:
-            vm.Script('''
-            var mockCanvas = (window) => {
-                window.HTMLCanvasElement.prototype.getContext = function () {
-                    return {
-                        fillRect: function() {},
-                        clearRect: function(){},
-                        getImageData: function(x, y, w, h) {
-                            return  {
-                                data: new Array(w*h*4)
-                            };
-                        },
-                        putImageData: function() {},
-                        createImageData: function(){ return []},
-                        setTransform: function(){},
-                        drawImage: function(){},
-                        save: function(){},
-                        fillText: function(){},
-                        restore: function(){},
-                        beginPath: function(){},
-                        moveTo: function(){},
-                        lineTo: function(){},
-                        closePath: function(){},
-                        stroke: function(){},
-                        translate: function(){},
-                        scale: function(){},
-                        rotate: function(){},
-                        arc: function(){},
-                        fill: function(){},
-                        measureText: function(){
-                            return { width: 0 };
-                        },
-                        transform: function(){},
-                        rect: function(){},
-                        clip: function(){},
-                    };
+                func_err = code.split('var errorInfoObject = window.')[1].split('(')[0]
+                err_req = code.split(func_err)[1].split('window.')[1].split('(')[0]
+
+                if 'getClientRects' in code:
+                    unk_decryp = code.split('.getClientRects())')[1].split('.length')[1].split('();return}')[1].split('(JSON')[0]
+                else:
+                    unk_decryp = 'UNKNOWN_1210'
+
+                if 'ht.atrs' in code:
+                    _d = code.split("['ht.atrs']")[0]
+                    bludthis = _d[len(_d) - 15:len(_d)].split('_chl_opt.')[1]
+                else:
+                    bludthis = 'UNKNOWN_1211'
+
+                additional_code = '''
+                var _unknown_f = function(h, i) {
+                    gw = '_cco_coma'.split(':');
+                    gx = gw.includes.bind(gw)
+                    for (i = Object.keys(i), m = 0; m < l.length; m++) {
+                        if (n = l[m], 'f' === n && (n = 'N'), h[n]) {
+                            for (
+                                o < 0; o < i[l[m]].length; -1 === h[n].indexOf(i[l[m]][o]) && (gx(i[l[m]][0]) || h[n].push('0.' + i[l[m]][o])), o++);
+                        } else
+                            h[n] = i[l[m]].map(function (s) {
+                                return '0.' + s;
+                            })
+                        }
                 }
-                window.HTMLCanvasElement.prototype.toDataURL = function () {
-                    return "";
+
+                var _unknown_req = function(){} // simulation
+                var nr = 3, ar = 500, ir = 500;
+
+                var wrapper = document.createElement("div");
+                wrapper.innerHTML = `
+                <input type="hidden" name="cf-turnstile-response" id="cf-chl-widget-q0kml_response">
+                <input type="hidden" name="cf_challenge_response" id="cf-chl-widget-q0kml_legacy_response"
+                `;
+
+                window._cf_chl_opt.blud_is_this = {
+                    "w.iW": window.innerWidth,
+                    "ht.atrs": ["lang", "dir"],
+                    "pi": {
+                        "xp": window.vr(wrapper).substring(0, ir),
+                        "pfp": window.mr(document, nr, ar),
+                        "sL": 4,
+                        "ssL": 2,
+                        "mL": document.getElementsByTagName("meta").length,
+                        "t": window.gr(document.title),
+                        "tL": document.getElementsByTagName('*').length,
+                        "lH": "_thesiteurl_?__cf_chl_rt_tk=_tk_chl_token",
+                        "sR": true
+                    }
+                }
+        
+                document.body.innerHTML = ''
+                console.log(window._performance.getEntries())
+                '''.replace('_unknown_f', unknown_func).replace('_unknown_req', err_req).replace('blud_is_this', bludthis).replace('_thesiteurl_', ReversedObjects.cf_chl_opt['chlApiUrl']).replace('_tk_chl_token', ReversedObjects.cf_chl_opt['_rttk']).replace('q0kml', ReversedObjects.cf_chl_opt['chlApiWidgetId']).replace('_cco_coma', ReversedObjects.chl_opt_keys['what_hello']['cco_coma'])
+
+                additional_code += self.get_reversed_func('errorl').replace('errorl', func_err)
+                additional_code += self.get_reversed_func('unknown_decryp').replace('unknown_decryp', unk_decryp)
+
+                vm.Script(additional_code).runInContext(self.window)
+
+
+            obj, prop = code.split("('ur-handler")[0].split('(!window.')[1].split('.')
+
+            vm.Script('''
+            window._o0 = {_p0: null};
+
+            window._o0._p0 = function(c){
+                return window._cf_chl_opt.cK && window._cf_chl_opt.cK.indexOf(c) !== -1
+            }
+            '''.replace('_o0', obj).replace('_p0', prop)).runInContext(self.window)
+
+        shadow_html = open('cloudflare-data/turnstile_html.html', 'r').read()
+        _parse_window_eval()
+
+        vm.Script('''
+        //console.log(window._cf_chl_opt)
+        window.sendRequest = function(arg1, arg2){console.log(arg1, arg2)}
+
+        window.Worker = class {
+            constructor(blobURL) {
+                this.messageListeners = [];
+                this.errorListeners = [];
+                this.terminated = false;
+                try {
+                    const blobContent = this._getBlobContent(blobURL);
+                    this.Self = {
+                        postMessage: (message) => {
+                            setImmediate(() => {
+                                this.messageListeners.forEach((listener) => listener({ data: message }));
+                            });
+                        },
+                        onmessage: null,
+                        onerror: null,
+                        terminate: () => {
+                            this.terminated = true;
+                        }
+                    };
+                } catch (error) {
+                    this.errorListeners.forEach((listener) => listener(error));
                 }
             }
-            var contain = window.document.createElement('div')
-            window.document.body.appendChild(contain);
+            _getBlobContent(blobURL) {
+                const base64Content = blobURL.split(',')[1];
+                return Buffer.from(base64Content, 'base64').toString('utf-8');
+            }
+    
+            postMessage(message) {
+                if (this.terminated) return;
         
-            var _l = {'mode': 'closed'};
-            var _shadow = contain.attachShadow(_l);
-            _shadow.innerHTML = `__htmlc`
+                setImmediate(() => {
+                    if (this.Self === undefined) return;
+                    if (typeof this.Self.onmessage === 'function') {
+                        try {
+                            this.Self.onmessage({ data: message });
+                        } catch (error) {
+                            this.errorListeners.forEach((listener) => listener(error));
+                        }
+                    }
+                    new Promise((resolve, reject) => {
+                        var context = window.vm_script.createContext(this.Self);
+                        resolve(window.vm_script.runInContext(message, context));
+                    });
+                });
+            }
+            terminate() {
+                this.terminated = true;
+            }
+        };
+        var contain = window.document.createElement('div')
+        //window.document.body.appendChild(contain);
+        
+        var _shadow = contain.attachShadow({mode: 'closed'});
+        _shadow.innerHTML = `_sha_html`
 
-            window._cf_chl_opt[window._o_k['fragment']] = _shadow
+        window._cf_chl_opt[window._o_k['fragment']] = _shadow
 
-            Object.entries(_prev_d).forEach(([k, v]) => {
-                window._cf_chl_opt[k] = v
-            })
+        Object.entries(_prev_d).forEach(([k, v]) => {
+            window._cf_chl_opt[k] = v
+        })
 
-            mockCanvas(window)
-            '''.replace('__htmlc', self.html_code).replace('_prev_d', previous_data)).runInContext(self.window)
+        '''.replace('_sha_html', shadow_html).replace('__htmlc', self.html_code).replace('_prev_d', previous_data)).runInContext(self.window)
+        vm.Script(self.reverse_website_identifier(True)).runInContext(self.window)
 
-            vm.Script(self.reverse_website_identifier(True)).runInContext(self.window)
-            _parse_window_eval()
+        _getclientrects_code = "'pr'+f);console.log('lala', g);g.getClientRects = window.simulation_getClientRects;"
 
-        c = code.replace('arguments[0]', 'JSON.parse(window.decryptedChl)').replace('arguments[1]', 'window.sendRequest').replace('URL.createObjectURL', 'window.URL.createObjectURL').replace('new Worker(_cf_chl_ctx.hSNV0)', 'null').replace('document.body ', 'true').replace('document.body.shadowRoot === null', 'true').replace("window._cf_chl_opt.{_0xL}.mode === 'closed'", 'true').replace('document.head.compareDocumentPosition(document.body)', 'true').replace(f"window._cf_chl_opt.{_0xL}.querySelector('style').compareDocumentPosition(window._cf_chl_opt.{_0xL}.querySelector('div')) & Node.DOCUMENT_POSITION_FOLLOWING", 'true').replace(f"document.body.compareDocumentPosition(window._cf_chl_opt.{_0xL}.querySelector('div')) & (Node.DOCUMENT_POSITION_DISCONNECTED | Node.DOCUMENT_POSITION_FOLLOWING | Node.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC)", 'true').replace('TextEncoder', 'window.TextEncoder')
-        #print(c)
+        c = code.replace('arguments[0]', 'JSON.parse(window.decryptedChl)').replace('arguments[1]', 'window.sendRequest').replace(f'window._cf_chl_opt.{_0xL}.appendChild', 'window.document.body.appendChild').replace(f'window._cf_chl_opt.{_0xL}.removeChild', 'window.document.body.removeChild').replace('g.getClientRects()', 'true').replace('window.performance', 'window._performance')
+        open('cloudflare-data/ccc.js', 'w').write(c)
 
         vm.Script(c).runInContext(self.window)
         if flow_auto:
-            #vm.Script('console.log(_cf_chl_opt)').runInContext(self.window)
-            #vm.Script('console.log(_cf_chl_ctx)').runInContext(self.window)
-            #vm.Script('console.log(Object.keys(_cf_chl_ctx).length - _cf_chl_ctx.lnrK5)').runInContext(self.window)
             vm.Script('''
             Object.entries(JSON.parse(_prev_data)).forEach(([k, v]) => {
                 if ((_cf_chl_ctx[k] === undefined || isNaN(_cf_chl_ctx[k]) || _cf_chl_ctx[k] === null) && Object.prototype.hasOwnProperty.call(_cf_chl_ctx, k)) {
@@ -526,8 +646,86 @@ class VM_Automation:
             })
             '''.replace('_prev_data', json.dumps(previous_data))).runInContext(self.window)
             vm.Script('console.log(_cf_chl_ctx)').runInContext(self.window)
+            vm.Script('window.decryptedChl = _cf_chl_ctx').runInContext(self.window)
 
         result = json.loads(vm.Script('JSON.stringify(_cf_chl_ctx)').runInContext(self.window))
+        vm.Script('window.Worker = undefined;').runInContext(self.window) # avoid  SyntaxError: Identifier 'Worker' has already been declarede
+        return result
+
+    def evaluate_captcha(self, code: str, decryptedChl: str):
+        _0xL = self.window._o_k['fragment']
+        self.window.Worker = globalThis.Worker
+
+        clientx = str(random.randint(25, 45))
+        clienty = str(random.randint(40, 55))
+
+        screenx = str(random.randint(49, 52))
+        screeny = str(random.randint(350, 366))
+
+        obj = code.split('var handle = window.')[1].split('.')[0]
+
+        handlec = code.split(f'if(!window.{obj}.')[1].split("('ur-handler')")[0]
+        fo_func = code.split('new Error().stack,')[1].split(f'window.{obj}.')[1].split('();')[0]
+
+        rd1 = code.split('var onMessage = function(e) {')[1].split('window.')[1]
+        fd, fd2 = rd1.split('(function() {')[0].split('.')
+
+        all_code = '''
+        window.sendRequest = function(arg1, arg2){console.log(arg1, arg2)}
+
+        var _handthise = function(d) {
+            return window._cf_chl_opt.cK && window._cf_chl_opt.cK.indexOf(d) !== -1
+        }
+        var _fo = function() {
+            if (d = 'challenge_running', false) {
+                return;
+            }
+        }
+
+        window._obj0_ = {}
+        window._obj0_._handlerr = _handthise
+        window._obj0_.fO_fO = _fo
+        window._fded_ = {}
+        window._fded_.ffunc = function(c){c()};
+        '''.replace('_obj0_', obj).replace('_handlerr', handlec).replace('fO_fO', fo_func).replace('_fded_', fd).replace('ffunc', fd2)
+
+        vm.Script(all_code).runInContext(self.window)
+
+        click_code = '''
+        clickEvent = new window.MouseEvent("click", {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            clientX: _cx,
+            clientY: _cy,
+            screenX: _sx,
+            screenY: _sy
+        });
+        handle.dispatchEvent(clickEvent);'''.replace('_cx', clientx).replace('_cy', clienty).replace('_sx', screenx).replace('_sy', screeny).replace('\n', '').strip().replace(' ', '').replace('newwindow.MouseEvent', 'new window.MouseEvent').replace(';', ';\n')
+        print('clicking cloudflare captcha\033[33m X:', clientx, 'Y:', clienty, '\033[0m')
+
+        for i,v in enumerate(code.split(f'window.{obj}')):
+            if v[:1] == '.' and '();' in v[:10]:
+                code = code.replace(f'window.{obj}{v.split("(")[0]}();', '')
+
+        c = code.replace('arguments[0]', 'window.decryptedChl').replace('arguments[1]', 'window.sendRequest').replace('performance', '_performance').replace(f'window._cf_chl_opt.{_0xL}.appendChild', 'window.document.body.appendChild').replace(f'window._cf_chl_opt.{_0xL}.removeChild', 'window.document.body.removeChild').replace("String(e['y']);", "String(e['y']);console.log(eventData);").replace("var handle =", "document.body.innerHTML = `<!DOCTYPE html><html><body><button id='myButton'>Click me</button></body></html>`\nvar handle = document.getElementById('myButton');").replace("if (chlctx['GCPy6'] === 0) {", click_code+"\nif (chlctx['GCPy6'] === 0) {").replace('killwindow.Workers', 'killwindow_Workers').replace("URL.createObjectURL(new Blob([`onmessage=function(e){e.isTrusted&&''===e.origin&&null===e.source&&eval(e.data)}`], {type: 'text/javascript'}));", "URL.createObjectURL(new Blob([`onmessage=function(e){eval(e.data)}`], {type: 'text/javascript'}));").replace('setTimeout(after_clicked, 250);', 'after_clicked();')
+
+        vm.Script(c).runInContext(self.window)
+
+        vm.Script('''
+        Object.entries(JSON.parse(_prev_data)).forEach(([k, v]) => {
+            if (_cf_chl_ctx[k] === undefined && Object.prototype.hasOwnProperty.call(_cf_chl_ctx, k)) {
+                _cf_chl_ctx[k] = v
+            }
+        })
+
+        _cf_chl_ctx.ghvEF2 = 'MggmBxpUUhE9LBQkAlVHTgQEDQBLBmlcC04EXwZMDRRFRA8FVFREXmVvVHY7'
+        '''.replace('_prev_data', json.dumps(decryptedChl))).runInContext(self.window)
+
+        result = vm.Script('''
+        console.log(_cf_chl_ctx)
+        ''').runInContext(self.window)
+        result = vm.Script('JSON.stringify(_cf_chl_ctx)').runInContext(self.window)
         return result
           
 class OrchestrateJS:
@@ -621,6 +819,296 @@ class OrchestrateJS:
                         ReversedObjects.chl_opt_keys['_setTimeout'].append(
                             self.find_obf_value(v.split('(')[1].split(')')[0]))
 
+    def decrypter_response(self, response, cf_ray):
+        for i,v in enumerate(self.js.split('isNaN')):
+            if '=32' in v[len(v) - 4000:len(v)] and '/./g' in v[len(v) - 3000:len(v)]:
+                o = v[len(v) - len(v):len(v)].split(',')
+            elif '=32' in v[len(v) - 500:len(v)] and '/./g' in v[len(v) - 300:len(v)]:
+                o = v[len(v) - 800:len(v)].split(',')
+
+        def _dl(i, o):
+            for _ in range(10, 35):
+                if '(/./g' in o[i + _]:
+                    return True
+            return False
+
+        for i,p in enumerate(o):
+            t = ['c', 'f']
+            for ted in t:
+                if (p[:2].isalpha() or (p[:1].isalpha() and p[1:2].isnumeric())) and f'=function({ted}' in p[2:14]:
+                    func = self.js.split(f'{p[:2]}=function(')[1]
+        
+                    if "('')}}," in func[:4600]:
+                        func = func.split("('')}},")[0] + "('')}}"
+                    elif "('')}," in func[:4600]:
+                        func = func.split("('')},")[0] + "('')}"
+
+                    l = f'decrypt_response=function(' + func
+                    v = l[:100].split('{for(')[1].split(',')[0].split('=')[1]
+    
+                    func = l.replace(v, 'gF').replace('eM[', 'window[')
+                    break
+
+                if p == f'function({ted}' and _dl(i, o):
+                    a = o[(i - 1 if f'function({ted}' in p else i + 1)]
+    
+                    g = f'{a},{p}'
+                    if 'function' in p:
+                        a =p
+                        p = f'function({ted}'
+
+                    func = self.js.split(g)[1].split("('')})")[0] + "('')}"
+    
+                    l = f'decrypt_response={a}' + func
+                    v = l[:100].split('{for(')[1].split(',')[0].split('=')[1]
+    
+                    func = l.replace(v, 'gF').replace('eM[', 'window[')
+                    break
+
+        for i,v in enumerate(func.split('window')):
+            if "'_'" in v[:50]:
+                d = v[:50]
+    
+                if ")]+'_'" in d:
+                    s = d.split("+'_")[0]
+                elif ")],'_'" in d:
+                    s = d.split(",'_")[0]
+
+                func = func.replace(f'window{s}', f'"{cf_ray}"')
+            if ')](' in v[:15] and '=[]' in v[:25]:
+                u = v.split('](')[0] + ']'
+                func = func.replace(f'window{u}', 'atob')
+            
+        result = VM_Automation.decrypt_response(
+            response,
+            func,
+            f_less=self.f_less,
+            obf_code=self.parse_js_storaged_code(),
+            obf_number=self.obf_number,
+            parseint_gen=self.parseInt,
+            parentesis=self.double_parentesis
+        )
+        return result
+
+    def not_window_decrypted(self, response) -> list[str]:
+        lett = ['x', 's', 'o', 'v', 'n', 'C', 'D', 'B']
+        func_names = []
+        funcs = []
+
+        open('cloudflare-data/laputa.js', 'w').write(self.js)
+
+        fr = ''
+
+        for i,v in enumerate(self.js.split('200')):
+            if "'v_'" in v[:1000] and "'='" in v[:1000] and '304' in v[:500]:
+                for p in v.split('?new eM'):
+                    fr = p.split('(JSON[')[0]
+
+        for i,v in enumerate(fr.split(')](')):
+            if v[:1].isalpha() and v[1:3] == ')(' and v[:1] in lett:
+                o = v[:1]
+                d = v.split(')(')[1].split(',')[0]
+
+        _types = [f',{o}),', f'({o}),']
+
+        for t in _types:
+            for i,v in enumerate(fr.split(t)):
+                if v[len(v) - 2:len(v)].isalpha() and i == 0:
+                    w = v[len(v) - 2:len(v)]
+
+        for i,v in enumerate(self.js.split(f'function {w}(')):
+            if 'new' in v[:100]:
+                z = v.split('}function')[0]
+
+                funcs.append(f'function notdecrypted(' + z + '}')
+
+        for w in z.split('('):
+            if w[len(w) - 2:len(w)][:1].isalpha() and ('{return ' in w or 'new ' in w):
+                func_names.append(w[len(w) - 2:len(w)])
+
+            if w[:1].isalpha() and w[2:6] == ',new':
+                func_names.append(w[:2])
+
+        for func in func_names:
+            for i,v in enumerate(self.js.split(f'function {func}(')):
+                if len(v[:20].split(',')) >= 3:
+                    ready = f'function {func}(' + v.split('}function')[0]
+
+                    if not func.count('this.') > 15:
+                        ready += '}'
+
+                    funcs.append(ready)
+
+        for func in funcs:
+            if func.count('this.') > 15:
+                for e in func.split(']='):
+                    if e[:2].isalpha() or (e[:1].isalpha() and e[1:2].isnumeric()):
+                        l = e[:2]
+                        print(l)
+
+                        for i,v in enumerate(self.js.split(f'function {l}(')):
+                            _fun = f'function {l}(' + v.split('}function')[0] + '}'
+                            if len(_fun[:30].split(',')) >= 2 or '){' in _fun[:5]:
+                                funcs.append(_fun)
+
+                        for i,v in enumerate(self.js.split(f'{l}=')):
+                            if '(0,eval)' in v[:20]:
+                                ev = v[:25].split('),')[0] + ')'
+
+                                bv = ev.split('eval)(')[1].split('(')[0]
+                                ev = f'var {l}=' + ev.replace(bv, 'gF')
+
+                                if ev.count('(') == 4:
+                                    ev += ')'
+                                funcs.insert(0, ev)
+
+                            if 'atob(' in v[:10]:
+                                av = v[:25].split('),')[0] + ')'
+                                ov = av.split('atob(')[1].split('(')[0]
+
+                                av = f'var {l}=' + av.replace(ov, 'gF')
+
+                                if av.count('(') == 4:
+                                    av += ')'
+
+                                funcs.insert(0, av)
+
+                for r in func.split('[0,'):
+                    if r[:2].isalpha() or (r[:1].isalpha() and r[1:2].isnumeric()) and r[2:3] == ',':
+                        n = r[:2]
+
+                        for i,v in enumerate(self.js.split(f'function {n}(')):
+                            _fun2 = f'function {n}(' + v.split('}function')[0] + '}'
+
+                            if len(_fun2[:30].split(',')) >= 2:
+                                funcs.append(_fun2)
+
+                        for i,v in enumerate(self.js.split(f'{n}=')):
+                            if '(0,eval)' in v[:20]:
+                                ev = v[:25].split('),')[0] + ')'
+
+                                bv = ev.split('eval)(')[1].split('(')[0]
+                                ev = f'var {n}=' + ev.replace(bv, 'gF')
+
+                                if ev.count('(') == 4:
+                                    ev += ')'
+
+                                funcs.insert(0, ev)
+
+                            if 'atob(' in v[:10]:
+                                av = v[:25].split('),')[0] + ')'
+
+                                ov = av.split('atob(')[1].split('(')[0]
+                                av = f'var {n}=' + av.replace(ov, 'gF')
+                                if av.count('(') == 4:
+                                    av += ')'
+
+                                funcs.insert(0, av)
+
+
+                break
+
+        for i,v in enumerate(self.js.split('127')):
+            if '=0,0' in v and '255' in v and ('f.g' in v or 'e.g' in v):
+                pk = v.split('}function ')
+
+        for z in pk:
+            r = z[:2]
+
+            for i,v in enumerate(self.js.split(f'function {r}(')):
+                v = v.split('}function ')[1]
+
+                if 'f.h' in v and '127' in v and '255' and '=0,0' in v and 'while(' in v[(len(v) - 30):len(v)]:
+                    print('JOJOJO', v)
+                    funcs.insert(0, f'function ' + v + '}')
+
+        for i,v in enumerate(self.js.split(']=String[')):
+            if '256>' in v[len(v) - 50:len(v)]:
+                t = v[len(v) - 6:len(v)].split('[')[0].split(';')[1]
+                print('Lslal', t)
+                funcs.insert(0, f'var {t}=[]')
+
+        for i,v in enumerate(self.js.split("NaN,'','',0,[]")):
+            if 'this.' in v[(len(v) - 150):len(v)]:
+                gk = v[(len(v) - 500):len(v)].split('}function ')
+
+        for l in gk:
+            s = l[:2]
+
+            for i,v in enumerate(self.js.split(f'function {s}(')):
+                v = v.split('}function ')[1]
+
+                if v.count('this.') > 5 and "NaN,'','',0," in v:
+                    print('OMG', v)
+                    funcs.insert(0, f'function ' + v + '}')
+
+        #sys.exit()
+
+        _new_funcs = []
+
+        for func in funcs:
+            if not func.startswith('var '):
+                g = func[:70]
+
+                if '){for(' in g:
+                    v = g.split('){for(')[1]
+                elif '){' in g:
+                    v = g.split('){')[1]
+                elif '){if(' in g:
+                    v = g.split('){if(')[1]
+                elif '){return ' in g:
+                    v = g.split('){return ')[1]
+
+                elif '){j=(' in g:
+                    v = g.split('){j=(')[1]
+            
+                v = v.split(',')[0]
+        
+                if 'if(' in v:
+                    v = v.split('if(')[1]
+                elif 'return ' in v:
+                    v = v.split('return ')[1]
+                elif 'j=(' in v:
+                    v = v.split('j=(')[1]
+
+                b = v.split('=')[0]
+                nfunc = func.replace(v, f'{b} = (number) => b(number)')
+
+                if not nfunc in _new_funcs and ('(' not in v and ')' not in v):
+                    _new_funcs.append(nfunc.replace('}}()}', '}}'))
+                elif 'new' in func and len(func) < 150:
+                    _new_funcs.append(func)
+            else:
+                _new_funcs.append(func)
+
+        print('\n\n\n')
+        for new in _new_funcs:
+            print(new)
+
+
+        result = VM_Automation.emulate_decryption(
+            response,
+            _new_funcs,
+            f_less=self.f_less,
+            obf_code=self.parse_js_storaged_code(),
+            obf_number=self.obf_number,
+            parseint_gen=self.parseInt,
+            parentesis=self.double_parentesis
+        )
+
+    def execute_decrypter(self, vm, response, base_interactive, parsed_functions):
+        result = vm.emulate_decryption(
+            response,
+            base_interactive,
+            parsed_functions,
+            f_less=self.f_less,
+            obf_code=self.parse_js_storaged_code(),
+            obf_number=self.obf_number,
+            parseint_gen=self.parseInt,
+            parentesis=self.double_parentesis
+        )
+        
+
     def get_encrypter_floats(self) -> str:
         g_func = None
         encrypter_floats_gens = ''
@@ -659,11 +1147,10 @@ class OrchestrateJS:
                 break
 
         for i,v in enumerate(self.js.split("'h':function(")):
-           # print('ccccVVVVV', v[(len(v) - 2110):(len(v) - 900)])
-            if ",d={'" in v[(len(v) - 2110):(len(v) - 900)] and v.count('function') > 10 and '=String[' in v[(len(v) - 35):len(v)]:
+            if ",d={'" in v[(len(v) - 2210):(len(v) - 800)] and v.count('function') > 10 and '=String[' in v[(len(v) - 35):len(v)]:
                 #print(v[(len(v) - 1570):len(v)])
                 #print(v[(len(v) - 1570):len(v)].split(f',d=' + '{'))
-                spli1 = v[(len(v) - 2110):len(v)].split(f',d=' + '{')[1]
+                spli1 = v[(len(v) - 2210):len(v)].split(f',d=' + '{')[1]
                 spli2 = 'd={' + spli1.split('=String[')[0]
                 #print('DDDDDDDDDDARRAY', spli2)
                 d_v = spli2[:len(spli2) - 2]
@@ -708,6 +1195,7 @@ class OrchestrateJS:
                 'chlApiExpiryInterval': 290000,
                 'chlApiFailureFeedbackEnabled': False,
                 'chlApiLanguage': 'auto',
+                'cK': [],
                 'chlApiLoopFeedbackEnabled': False,
                 'chlApiMode': 'managed',
                 'chlApiRefreshExpired': 'never',
@@ -716,6 +1204,9 @@ class OrchestrateJS:
                 'cType': 'chl_api_m'
             })
         else:
+            if 'eventData' in code and 'handle.addEventListener' in code:
+                return window_data
+
             pa = code.split("fetch('/cdn-cgi/challenge-platform' + v + '/")[1].split("', {")[0]
             window_data['challenge_pat'] = pa
         return window_data
@@ -743,8 +1234,8 @@ class OrchestrateJS:
             mybro_v1 = I_IntValues[12]
             mybro_v2 = I_IntValues[16]
 
-            blud_v1 = int(mybro_v1.split('(')[1].split(')')[0])
-            blud_v2 = int(mybro_v2.split('(')[1].split(')')[0])
+            blud_v1 = round(float(mybro_v1.split('(')[1].split(')')[0]))
+            blud_v2 = round(float(mybro_v2.split('(')[1].split(')')[0]))
 
         def _find_object_value(value) -> str:
             for i,v in enumerate(self.js.split(value)):
@@ -779,7 +1270,7 @@ class OrchestrateJS:
         if ReversedObjects.unknown_array is None:
             for _value in unknown_values:
                 lp = self.find_obf_value(_value)
-            
+ 
                 self.flow_data['unknown_array'][lp] = 0
             ReversedObjects.unknown_array = self.flow_data['unknown_array']
         else:
@@ -855,13 +1346,20 @@ class OrchestrateJS:
                         self.flow_data['onload_token'] = code.split('onload=')[1].split('&')[0]
                         self.flow_data['really_a_key'] = code.split('/')[1]
 
+                    if len(code) in [363, 364] and ('/' in code and '+' in code):
+                        ReversedObjects.decrypt_values['string'] = code
+
+                    if code.startswith('_cf_chl_opt;') and code.count(';') in [15, 17]:
+                        ReversedObjects.chl_opt_keys['what_hello']['cco_coma'] = code
+
         self.f_less = int(self.js.split('f=f-')[1].split(',')[0])
 
         for i,v in enumerate(self.js.split('parseInt(')):
-            if '}(' in v[:500]:
+            if '}}(' in v[:450]:
                 variaba = v.split('}(')[1][:2]
-                #print(v)
-                self.obf_number = int(v.split('}(' + variaba)[1].split('),')[0].replace('\n', '').strip())
+                # why round(float()) ans not int() beacause this numbers.... 104e3 900e7 804
+                self.obf_number = round(float(v.split('}(' + variaba)[1].split('),')[0].replace('\n', '').strip()))
+                break
 
         self.parseInt = self.parseInt_values()
         self.interactive_data = self.intauto_values()
@@ -869,6 +1367,7 @@ class OrchestrateJS:
         # unknown array (super obfuscated)
         unk_values = []
         if ReversedObjects.unknown_array is None:
+            #print(i, v)
             for i,v in enumerate(self.js.split(']=performance[')):
                 if '={}' in v and '=0,' in v:
                     for letter in self.obf_letters:
@@ -911,6 +1410,7 @@ class OrchestrateJS:
                             break
 
         #print('calala:', ReversedObjects.decrypt_presicion)
+        #ReversedObjects.decrypt_presicion = '255'
 
         #print(ReversedObjects.chl_opt_keys)
 

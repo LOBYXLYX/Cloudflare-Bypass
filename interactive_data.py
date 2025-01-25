@@ -11,8 +11,6 @@ from dataclasses import dataclass
 from orchestrate_full_reverse import OrchestrateJS, ReversedObjects
 #from aqua import CF_Solver
 from wb_base_data import wbBaseData
-from Crypto.Random import get_random_bytes
-
 
 TEST_SITEKEY = '0x4AAAAAAAAjq6WYeRDKmebM'
 reversed_funcs = execjs.compile(open('cf_reversed_funcs.js', 'r').read())
@@ -33,7 +31,7 @@ class CF_Parser:
         d = rep.text.split(':')
         ray = rep.headers['CF-RAY'].split('-')[0]
     
-        rep2 = client.get(f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/turnstile/if/ov2/av0/rcv0/0/auvka/{siteKey}/dark/fbE/normal/auto/')
+        rep2 = client.get(f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/turnstile/if/ov2/av0/rcv0/0/auvka/{siteKey}/dark/fbE/normal/auto/')
         b = rep2.text.split(': ')
         return d[28:len(d)], b[1:len(b)], ray
 
@@ -45,13 +43,14 @@ class CF_Interactive(OrchestrateJS):
         super().__init__(code_js=js, auto_mode=self.auto_mode)
 
         if not self.auto_mode:
-            ReversedObjects.cf_chl_opt = {
+            ReversedObjects.cf_chl_opt.update({
                 'cType': self.find_value(3),
                 '_cRay': self.find_value(4),
                 'cvId': self.find_value(1),
+                'cFPWv': 'g',
                 'cUPMDTk': self.find_value(6).split('__cf_chl_tk=')[1],
                 'chlApiTimeoutEncountered': None
-            }
+            })
         else:
             ReversedObjects.cf_chl_opt.update({
                 'cRay': self.find_value(15),
@@ -98,8 +97,8 @@ class CF_Interactive(OrchestrateJS):
             '02': self.find_value(1),
             '03': self.find_value(11),
             '04': 0,
-            '05': abs(eMp3 - eMp4) if (eMp3 - eMp4) < 0 else eMp3 - eMp4,
-            '06': abs(eMp1 - eMp2) if (eMp1 - eMp2) < 0 else eMp1 - eMp2,
+            '05': (abs(eMp3 - eMp4) if (eMp3 - eMp4) < 0 else eMp3 - eMp4) * 20,
+            '06': (abs(eMp1 - eMp2) if (eMp1 - eMp2) < 0 else eMp1 - eMp2) * 20,
             '07': 1,
             '08': self.find_value(8),
             '09': self.find_value(16),
@@ -108,7 +107,7 @@ class CF_Interactive(OrchestrateJS):
             '12': False,
             '13': self.flow_data['ass_param2'],
             '14': '',
-            '15': [],#self.generate_equal_data(c=random.randint(2, 3)),
+            '15': [], #self.generate_equal_data(c=random.randint(2, 3)),
             '16': 0,
             '17': self.flow_data['ass_param1']
         }
@@ -136,8 +135,8 @@ class CF_Interactive(OrchestrateJS):
             '02': self.find_value(1),
             '03': 0,
             '04': 0,
-            '05': abs(eMp3 - eMp4) if (eMp3 - eMp4) < 0 else eMp3 - eMp4,
-            '06': abs(eMp1 - eMp2) if (eMp1 - eMp2) < 0 else eMp1 - eMp2,
+            '05': (abs(eMp3 - eMp4) if (eMp3 - eMp4) < 0 else eMp3 - eMp4) * 20,
+            '06': (abs(eMp1 - eMp2) if (eMp1 - eMp2) < 0 else eMp1 - eMp2) * 20,
             '07': 1,
             '08': self.find_value(25),
             '09': self.find_value(24),
@@ -156,7 +155,7 @@ class CF_Interactive(OrchestrateJS):
             '22': flow2_token,
             '23': 0,
             '24': really_key,
-            '25': 'https://{}/turnstile/v0/b/{}/api.js?onload={}&render=explicit'.format(self.find_value(2), really_key, onload_token),
+            '25': 'https://{}/turnstile/v0/g/{}/api.js?onload={}&render=explicit'.format(self.find_value(2), really_key, onload_token),
             '26': domain,
             '27': parsed_domain,
             '28': self.find_value(9),
@@ -200,7 +199,7 @@ class CF_Interactive(OrchestrateJS):
             '16': '',
             '17': 0,
             '18': really_key,
-            '19': 'https://{}/turnstile/v0/b/{}/api.js?onload={}&render=explicit'.format(self.find_value(2), really_key, onload_token),
+            '19': 'https://{}/turnstile/v0/g/{}/api.js?onload={}&render=explicit'.format(self.find_value(2), really_key, onload_token),
             '200': domain,
             '21': parsed_domain,
             '22': self.find_value(9),
@@ -223,7 +222,64 @@ class CF_Interactive(OrchestrateJS):
         for key, value in interactive.items():
             for key2, value2 in zip(interactive.keys(), ordered_flow.values()):
                 new_flow_data[key]
-        
+
+    def cf4_flow_data(
+        self,
+        domain,
+        parsed_domain,
+        really_key,
+        onload_token,
+        website_cf_ray
+    ):
+        new_flow_data = {}
+
+        eMp1, eMp2 = self.perform_now()
+        eMp3, eMp4 = self.perform_now()
+
+        ordered_flow = {
+            '01': self.find_value(14),
+            '02': '3',
+            '03': 0,
+            '04': 0,
+            '05': abs(eMp3 - eMp4) if (eMp3 - eMp4) < 0 else eMp3 - eMp4,
+            '06': abs(eMp1 - eMp2) if (eMp1 - eMp2) < 0 else eMp1 - eMp2,
+            '07': 1,
+            '08': self.find_value(25),
+            '09': self.find_value(24),
+            '10': self.flow_data['unknown_array'],
+            '11': 'undefined',
+            '12': 'undefined',
+            '13': self.flow_data['ass_param1'],
+            '14': '',
+            '15': self.generate_equal_data(c=random.randint(2,3)),
+            '16': 0,
+            '17': self.flow_data['ass_param2'],
+            '18': '0',
+            '19': self.find_value(6),
+            '20': 'undefined',
+            '21': 'undefined',
+            '22': 'undefined',
+            '23': 0,
+            '24': really_key,
+            '25': 'https://{}/turnstile/v0/g/{}/api.js?onload={}&render=explicit'.format(self.find_value(2), really_key, onload_token),
+            '26': domain,
+            '27': parsed_domain,
+            '28': self.find_value(9),
+            '29': random.uniform(100, 1000),
+            '30': random.uniform(500, 1500),
+            '31': 0,
+            '32': 0,
+            '33': random.uniform(300, 1200),
+            '34': 0,
+            '35': random.uniform(1,80),
+            '36': random.uniform(5, 150),
+            '37': random.uniform(100, 600),
+            '38': random.uniform(5, 90)
+        }
+        for key, value in zip(self.interactive_data.keys(), ordered_flow.values()):
+            new_flow_data[key] = value
+        return new_flow_data
+
 
     @staticmethod
     def eventClick_data() -> dict[str, str]:
