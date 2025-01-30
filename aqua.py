@@ -46,7 +46,6 @@ class CF_MetaData:
             r = self.clientRequest.get(self.domain + r.headers['Location'])
 
         html_site = r.text
-        print(html_site)
 
         s_param = None
         cf_ray = r.headers['Cf-Ray'].split('-')[0]
