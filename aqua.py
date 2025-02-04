@@ -51,11 +51,26 @@ class CF_MetaData:
         cf_ray = r.headers['Cf-Ray'].split('-')[0]
 
         for i,v in enumerate(html_site.split(',/')):
-            if v.startswith('0.'):
+            if v.startswith('jsd/r/'):
                 s_param = v.split('/,')[0]
                 break
 
-        variab = html_site.split('function a(')[1][:2]
+        v_tps = [
+            'a', 'b', 'z', 'f', 'e', 'm', 'n', 
+            'p', 'g', 'h', 'j', 'k', 'l', 'y',
+            'Z', 'x', 'v', 'q', 'd', 's', 't'
+        ]
+
+        for vtp in v_tps:
+            for i,v in enumerate(html_site.split(f'function {vtp}(')):
+                vb = v[:1300]
+
+                if vb.count(',') > 60 and 'return ' in vb[:15] and (
+                    '_cf_chl_opt' in vb or '/jsd/r' in vb or '/cdn-cgi' in vb
+                ) and v[2:3] == ')':
+                    variab = v[:2]
+                    break
+
         spli1 = html_site.split(f"{variab}='")[1].split(',')
 
         for i, v in enumerate(spli1):
@@ -468,7 +483,7 @@ class CF_Solver(CF_MetaData):
         clientRequest: typing.Any = None, 
         userAgent: str = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_7_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/120.0.0.0 Mobile/15E148 Safari/604.1',
         jsd_main : str = '/cdn-cgi/challenge-platform/scripts/jsd/main.js',
-        jsd_request: str = '/cdn-cgi/challenge-platform/h/g/jsd/r',
+        jsd_request: str = '/cdn-cgi/challenge-platform/h/b',
         proxy: typing.Union[str, dict] = None,
         web_cookies: bool = True,
         headers: dict[str, typing.Any] = {}
@@ -562,7 +577,6 @@ class CF_Solver(CF_MetaData):
                 **self.headers
                 #**self._headers_device_identifier
             }
-        print(self.client)
 
         self.cf_ray: typing.Optional[str] = None
 
@@ -617,7 +631,6 @@ class CF_Solver(CF_MetaData):
             clientRequest=self.client,
             userAgent=self.userAgent
         )
-        print('THIS DOES NOT WORK ANYMORE BECAUSE OF THE TURNSTILE UPDATE')
         def _get_orchestrate_data(auto_mode=False, *args) -> tuple[object, str, str]:
             js = self.cf_orchestrate_js(auto_mode, *args)
 
@@ -769,14 +782,10 @@ class CF_Solver(CF_MetaData):
 
     def cookie(self): 
         wb, s_param, self.cf_ray = self.cf_cookie_parse()
-        payload = {
-            'wp': wb,
-            's': s_param
-        }
 
         jsd = self.client.post(
-            f'{self.domain}{self.jsd_request}/{self.cf_ray}',
-            json=payload
+            f'{self.domain}{self.jsd_request}/{s_param}/{self.cf_ray}',
+            data=wb
         )
         return jsd.cookies['cf_clearance']
 
