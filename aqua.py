@@ -643,6 +643,8 @@ class CF_Solver(CF_MetaData):
 
             return oj, js, enc_floats
 
+        print('TURNSTILE SOLVER DOES NOT WORK ANYMORE, BECAUSE CLOUDFLARE HAS PATCHED IT')
+
         oj, cf_js, enc_f = _get_orchestrate_data()
         cf_turnstile.cloudflare_js = cf_js
         cf_int1 = CF_Interactive(cf_js, cf_turnstile.d, False)
