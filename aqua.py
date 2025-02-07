@@ -560,7 +560,7 @@ class CF_Solver(CF_MetaData):
                     'origin'
                 ]
             )
-            self.client.proxies = proxy
+            self.client.proxies = self._proxy_dict()
             self.client.headers = {
                 'accept': '*/*',
                 'accept-language': 'es-US,es-419;q=0.9,es;q=0.8',
