@@ -224,7 +224,7 @@ class CF_MetaData:
         ov2_t_url = f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/turnstile/if/ov2/av0/rcv/{l}/{siteKey}/dark/fbE/new/normal/auto/'
 
         ca = self.clientRequest.get(ov2_t_url).text
-        chl_opt = ca.split('window._cf_chl_opt={')[1].split(':')
+        chl_opt = ca.split('window._cf_chl_opt={')[1].split(': ')
 
         rep = self.clientRequest.get(self.domain)
         d = rep.text.split(':')
