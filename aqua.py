@@ -14,7 +14,7 @@ import jsbeautifier
 from dataclasses import dataclass
 from wb_base_data import wbBaseData
 from interactive_data import CF_Parser, CF_Interactive
-from response_decrypter import ReverseDecrypter
+from reverse_decrypter import analyze_response
 from orchestrate_full_reverse import (
     OrchestrateJS, 
     VM_Automation,  
