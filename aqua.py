@@ -9,22 +9,26 @@ import uuid
 import subprocess
 import threading
 import tls_client
+import jsbeautifier
 
 from dataclasses import dataclass
 from wb_base_data import wbBaseData
 from interactive_data import CF_Parser, CF_Interactive
-from reverse_decrypter import analyze_response
+from response_decrypter import ReverseDecrypter
 from orchestrate_full_reverse import (
     OrchestrateJS, 
     VM_Automation,  
     ReversedObjects
 )
 
+cfwr = 'g'
+
 @dataclass
 class CF_MetaData:
     domain: str = None
     clientRequest: typing.Any = None
     userAgent: typing.Optional[str] = None
+    clearanceRay: str = None
 
     jsd_main_url: str = None
     _domain_parsed: typing.Optional[str] = None
@@ -40,15 +44,10 @@ class CF_MetaData:
     }
 
     def clearance_analyzer(self) -> typing.Tuple[typing.Optional[str], str, ...]:
-        r = self.clientRequest.get(self.domain + self.jsd_main_url)
-
-        if r.status_code == 302 and 'Location' in r.headers: # pls add auto_redirection to tls_client libraru
-            r = self.clientRequest.get(self.domain + r.headers['Location'])
+        r = self.clientRequest.get(self.domain + self.jsd_main_url, allow_redirects=True)
 
         html_site = r.text
-
         s_param = None
-        cf_ray = r.headers['Cf-Ray'].split('-')[0]
 
         for i,v in enumerate(html_site.split(',/')):
             if v.startswith('jsd/r/'):
@@ -58,7 +57,7 @@ class CF_MetaData:
         v_tps = [
             'a', 'b', 'z', 'f', 'e', 'm', 'n', 
             'p', 'g', 'h', 'j', 'k', 'l', 'y',
-            'Z', 'x', 'v', 'q', 'd', 's', 't'
+            'Z', 'x', 'v', 'q', 'd', 's'
         ]
 
         for vtp in v_tps:
@@ -144,7 +143,7 @@ class CF_MetaData:
             )
             return result
 
-        return siteKey, s_param, cf_ray, _encrypter
+        return siteKey, s_param, _encrypter
 
     def _get_ray_and_chltK(self) -> tuple[str, str]:
         r = self.clientRequest.get(self.domain)
@@ -163,10 +162,10 @@ class CF_MetaData:
             useragent=self.userAgent
         )
         base_str = json.dumps(base_data, separators=(',', ':'))
-        siteKey, s, cf_ray, encrypter = self.clearance_analyzer()
+        siteKey, s, encrypter = self.clearance_analyzer()
 
         wb = encrypter(base_str, siteKey)
-        return wb, s, cf_ray
+        return wb, s
 
     @staticmethod
     def parse_domain(domain):
@@ -188,13 +187,14 @@ class CF_MetaData:
             'upgrade-insecure-requests': '1',
             'referer': chl_tk_referer,
         })
-        url = f'{self._domain_parsed}/cdn-cgi/challenge-platform/h/g/orchestrate/chl_page/v1'
+        url = f'{self._domain_parsed}/cdn-cgi/challenge-platform/h/{cfwr}/orchestrate/chl_page/v1'
         params = {
             'ray': cf_ray,
         }
+        print(params)
         if auto_mode:
             params['lang'] = 'auto'
-            url = f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/orchestrate/chl_api/v1' 
+            url = f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/{cfwr}/orchestrate/chl_api/v1' 
 
         def _send_orche_thread() -> None:
             nonlocal chl_code, params, url, key1
@@ -215,13 +215,14 @@ class CF_MetaData:
             time.sleep(0.1)
 
         thread.join()
+        open('cloudflare-data/cf_code_formatted.txt', 'w').write(jsbeautifier.beautify(chl_code))
         open('cloudflare-data/cf_code.txt', 'w').write(chl_code)
-        return chl_code
+        return chl_code 
 
     def parse_challenge_auto(self, siteKey) -> tuple[list[str], str, list[str], str, str]:
         cf_reversed_js = execjs.compile(open('cf_reversed_funcs.js', 'r').read())
         l = cf_reversed_js.call('l')
-        ov2_t_url = f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/turnstile/if/ov2/av0/rcv/{l}/{siteKey}/dark/fbE/new/normal/auto/'
+        ov2_t_url = f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/{cfwr}/turnstile/if/ov2/av0/rcv/{l}/{siteKey}/dark/fbE/new/normal/auto/'
 
         ca = self.clientRequest.get(ov2_t_url).text
         chl_opt = ca.split('window._cf_chl_opt={')[1].split(': ')
@@ -230,6 +231,7 @@ class CF_MetaData:
         d = rep.text.split(':')
         ray = rep.headers['Cf-Ray'].split('-')[0]
 
+        open('cloudflare-data/site_html.html', 'w').write(rep.text)
         return chl_opt, ov2_t_url, d[28:len(d)], chl_opt[15].split("'")[1], ca, rep.text
 
     def challenge_onload(self, flow_data, callback=False) -> str:
@@ -244,7 +246,7 @@ class CF_MetaData:
             params['render'] = 'onloadTurnstileCallback'
 
         onload_javascript = self.clientRequest.get(
-            f'https://challenges.cloudflare.com/turnstile/v0/g/{this_key}/api.js',
+            f'https://challenges.cloudflare.com/turnstile/v0/{cfwr}/{this_key}/api.js',
             params=params
         ).text
 
@@ -293,7 +295,7 @@ class CF_TurnstileBase(CF_MetaData):
             domain=self.domain, 
             userAgent=self.userAgent,
             cf_html=True,
-            html_code=self.site_html
+            html_code=open('cloudflare-data/turnstile_html.html', 'r').read()
         )
         self.utility = execjs.compile(open('_reverse_utility.js', 'r').read())
         self.cloudflare_js = None
@@ -303,7 +305,6 @@ class CF_TurnstileBase(CF_MetaData):
 
     def init_cf_params(self):
         self.b, self.ov1_url, self.d, self.cf_ray, self.turnstile_html, self.site_html = self.parse_challenge_auto(self.OtherSiteKey)
-        print(self.b, self.d)
 
     def build_flow_ov1(self, is_flow_auto: bool, chl: list = None) -> tuple[str, str]:
         if not is_flow_auto:
@@ -334,24 +335,23 @@ class CF_TurnstileBase(CF_MetaData):
         decrypter: types.FunctionType
     ):
         self.client.headers.update({
-            'cf-challenge': cfChallenge,
-            'cf-chl-retryattempt': '0',
-            'save-data': 'on',
-            'content-type': 'application/x-www-form-urlencoded',
+            'cf-chl': self.d_find_value(5),
+            "cf-chl-ra": "0",
+            #'save-data': 'on',
+            'content-type': 'text/plain;charset=UTF-8',
             'referer': referrer
         })
         print('cloudflare challenge URL:\033[36m', flowUrl, '\033[0m')
-        print('request payload:', f'v_{self.cRay}={flowToken[:100]}....')
+        print('request payload:', f'{flowToken[:100]}')
 
-        response = self.client.post(flowUrl, data={f'v_{self.cRay}': flowToken}).text
+        response = self.client.post(flowUrl, data=flowToken).text
 
-        print('cloudflare response:\033[32m', response[:100]+'....', '\033[0m')
+        print('cloudflare response:\033[32m', response[:70]+'....', '\033[0m')
 
         if '"err"' in response:
             raise TypeError(f'Cloudflare Challenge Failed {response}')
 
         window_decrypted = decrypter(response, self.cRay)
-        print(window_decrypted)
         return window_decrypted
 
     def solve_flow_ov1(
@@ -363,12 +363,13 @@ class CF_TurnstileBase(CF_MetaData):
         encrypter: types.FunctionType,
         chl_opt: list[str] = None,
         notdecrypter: types.FunctionType = None,
+        other_encrypted: str = None,
         evaluate_window: bool = True,
         **kwargs
     ) -> tuple[typing.Optional[dict], typing.Optional[dict]]:
         base_interactive = self.utility.call('parseUndefined', self.baseStr(cf_interactive))
-        print(base_interactive)
         flow_token = encrypter(base_interactive, siteKey)
+        print('decrypted challenge data:', base_interactive+'....')
 
         if flow_auto:
             self.cRay = chl_opt[15].split("'")[1]
@@ -378,11 +379,11 @@ class CF_TurnstileBase(CF_MetaData):
 
         flow_url_part, cf_challenge_value = self.build_flow_ov1(flow_auto, chl_opt)
         if flow_auto:
-            complet_flow_url = f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/flow/ov1/{flow_url}/' + flow_url_part
+            complet_flow_url = f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/{cfwr}/flow/ov1/{flow_url}/' + flow_url_part
             ReversedObjects.challenge_cloudflare = flow_url
             referrer = self.ov1_url
         else:
-            complet_flow_url = f'{self.main_domain}/cdn-cgi/challenge-platform/h/g/flow/ov1/{flow_url}/' + flow_url_part
+            complet_flow_url = f'{self.main_domain}/cdn-cgi/challenge-platform/h/{cfwr}/flow/ov1/{flow_url}/' + flow_url_part
             ReversedObjects.challenge_website = flow_url
             referrer = self.domain
 
@@ -396,6 +397,10 @@ class CF_TurnstileBase(CF_MetaData):
             referrer=referrer,
             decrypter=decrypter
         )
+        decrypt_reverser = ReverseDecrypter(
+            jscode=self.cloudflare_js
+        )
+
         if evaluate_window:
             if _window_decrypted.startswith('window._'):
                 eval_result = self.vm_automation.evaluate(
@@ -405,12 +410,16 @@ class CF_TurnstileBase(CF_MetaData):
                     previous_data=base_interactive
                 )
             else:
-                print(_window_decrypted[:300])
+                functions, scripts = decrypt_reverser.analyze()
+
+                open('cloudflare-data/response_test.txt', 'w').write(_window_decrypted)
                 decrypted = notdecrypter(
                     vm=self.vm_automation, 
                     response=_window_decrypted, 
                     base_interactive=base_interactive,
-                    parsed_functions=analyze_response(self.cloudflare_js)
+                    parsed_functions=functions,
+                    scripts_sandbox=scripts,
+                    other_encrypted=other_encrypted
                 )
         else:
             eval_result = _window_decrypted
@@ -481,21 +490,19 @@ class CF_Solver(CF_MetaData):
         *,
         siteKey: str = None,
         clientRequest: typing.Any = None, 
-        userAgent: str = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_7_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/120.0.0.0 Mobile/15E148 Safari/604.1',
+        userAgent: str = 'Mozilla/5.0 (Windows NT 10.0; WOW64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6788.76 Safari/537.36',
         jsd_main : str = '/cdn-cgi/challenge-platform/scripts/jsd/main.js',
-        jsd_request: str = '/cdn-cgi/challenge-platform/h/b',
+        jsd_request: str = f'/cdn-cgi/challenge-platform/h/b',
         proxy: typing.Union[str, dict] = None,
-        web_cookies: bool = True,
         headers: dict[str, typing.Any] = {}
     ):
-        self.domain = domain
+        self.domain = domain if not domain[len(domain) - 1:] == '/' else domain.strip('/')
         self.siteKey = siteKey
         self.client = clientRequest
         self.userAgent = userAgent
         self.jsd_main = jsd_main
         self.jsd_request = jsd_request
         self.proxy_obj = proxy
-        self.web_cookies = web_cookies
         self.headers = headers
 
         if self.client is None:
@@ -545,7 +552,7 @@ class CF_Solver(CF_MetaData):
                 supported_signature_algorithms=self._algorithms,
                 cert_compression_algo='brotli',
                 connection_flow=random.randint(48, 64) << 18,
-                ja3_string='772,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,27-13-10-23-5-16-35-65281-45-18-65037-43-17513-51-11-0,4588-29-23-24,0', # automatized ja$
+                ja3_string='772,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,65037-10-27-13-45-0-16-5-17613-51-35-11-43-23-18-65281,4588-29-23-24,0', # automatized ja$
                 pseudo_header_order=[
                     ':authority',
                     ':scheme',
@@ -560,34 +567,35 @@ class CF_Solver(CF_MetaData):
                     'origin'
                 ]
             )
-            self.client.proxies = self._proxy_dict()
+            self.client.proxies = proxy
+
             self.client.headers = {
                 'accept': '*/*',
                 'accept-language': 'es-US,es-419;q=0.9,es;q=0.8',
                 'user-agent': self.userAgent,
-                'content-type': 'application/json',
+                'content-type': 'text/plain;charset=UTF-8',
                 'referer': self.domain + '/',
                 'origin': CF_MetaData.parse_domain(self.domain),
-                'sec-ch-ua': '"Not/A)Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-                'sec-ch-ua-mobile': '??',
-                'sec-ch-ua-platform': '"iOS"',
+                'sec-ch-ua': '"Not/A)Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"',
                 'sec-fetch-dest': 'document',
                 'sec-fetch-mode': 'navigate',
                 'sec-fetch-site': 'none',
                 **self.headers
+           
                 #**self._headers_device_identifier
             }
 
-        self.cf_ray: typing.Optional[str] = None
-
-        if self.web_cookies:
-            self._website_cf_cookies()
+        self.clearanceRay: typing.Optional[str] = None
+        self._website_cf_cookies()
 
         ReversedObjects.cf_chl_opt['chlApiUrl'] = self.domain
 
         super().__init__(
             domain=self.domain,
-            clientRequest=self.client, 
+            clientRequest=self.client,
+            clearanceRay=self.clearanceRay,
             userAgent=self.userAgent,
             jsd_main_url=self.jsd_main
         )
@@ -606,7 +614,17 @@ class CF_Solver(CF_MetaData):
             '_cfuvid',
         )
 
-        site = self.client.get(self.domain)
+        site = self.client.get(self.domain, allow_redirects=True)
+
+        if len(site.url) > len(self.domain):
+            if ':443/' in site.url:
+                self.domain = site.url.split(':443')[0]
+            elif site.url.endswith('/'):
+                self.domain = site.url.strip('/')
+            elif 'www' in site.url[:14] and 'www' not in self.domain[:14]:
+                self.domain = 'https://' + site.url.split('/')[2]
+
+        self.clearanceRay = site.headers['Cf-Ray'].split('-')[0]
         self.client.cookies.clear()
 
         for cookie_name, value in site.cookies.items():
@@ -620,11 +638,16 @@ class CF_Solver(CF_MetaData):
         if not len(self.client.cookies) > 0: # Try another method
             if 'window.__CF$cv$params=' in site.text and self.jsd_main in site.text:
                 # get __cf_bm
-                cookie = self.client.get(self.domain + self.jsd_main).cookies
+                cookie = self.client.get(self.domain + self.jsd_main, allow_redirects=True).cookies
                 self.client.cookies = cookie
 
 
     def solve_turnstile(self):
+        print('TURNSTILE SOLVER DOES NOT WORK ANYMORE, BECAUSE CLOUDFLARE HAS PATCHED IT')
+
+        time.sleep(4)
+        self.client.cookies['cf_chl_rc_i'] = '1'
+
         cf_turnstile = CF_TurnstileBase(
             domain=self.domain,
             OtherSiteKey=self.siteKey,
@@ -643,8 +666,6 @@ class CF_Solver(CF_MetaData):
 
             return oj, js, enc_floats
 
-        print('TURNSTILE SOLVER DOES NOT WORK ANYMORE, BECAUSE CLOUDFLARE HAS PATCHED IT')
-
         oj, cf_js, enc_f = _get_orchestrate_data()
         cf_turnstile.cloudflare_js = cf_js
         cf_int1 = CF_Interactive(cf_js, cf_turnstile.d, False)
@@ -656,7 +677,8 @@ class CF_Solver(CF_MetaData):
             cf_interactive=cf_int1.cf1_flow_data(),
             encrypter=oj.encrypter_array,
             decrypter_response=oj.decrypter_response,
-            notdecrypter=oj.execute_decrypter
+            notdecrypter=oj.execute_decrypter,
+            other_encrypted=oj.weird_encrypted
         )
         #print(result)
         print('\n')
@@ -694,7 +716,7 @@ class CF_Solver(CF_MetaData):
         pat = challenge_result['challenge_pat']
 
         response = cf_turnstile.simple_request(
-            f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/{pat}',
+            f'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/{cfwr}/{pat}',
             new_headers={
                 'referer': cf_turnstile.ov1_url
             }
@@ -778,23 +800,31 @@ class CF_Solver(CF_MetaData):
             ),
             encrypter=oj.encrypter_array,
             chl_opt=cf_turnstile.b,
-            notdecrypter=oj.execute_decrypter
+            decrypter_response=oj2.decrypter_response,
+            notdecrypter=oj.execute_decrypter,
+            other_encrypted=oj.weird_encrypted
         )
 
 
     def cookie(self): 
-        wb, s_param, self.cf_ray = self.cf_cookie_parse()
-
+        wb, s_param = self.cf_cookie_parse()
         jsd = self.client.post(
-            f'{self.domain}{self.jsd_request}/{s_param}/{self.cf_ray}',
-            data=wb
+            f'{self.domain}{self.jsd_request}/{s_param}/{self.clearanceRay}',
+            data=wb,
+            allow_redirects=True
         )
         return jsd.cookies['cf_clearance']
 
 if __name__ == '__main__':
+    invisible = False
+    
     cf = CF_Solver(
         'https://nopecha.com/demo/cloudflare',
         siteKey='0x4AAAAAAAAjq6WYeRDKmebM'
     )
+    
     print('Solving Turnstile....')
-    cf.solve_turnstile()
+    if not invisible:
+        cf.solve_turnstile()
+    else:
+        cf.invisible_challenge()
