@@ -494,6 +494,7 @@ class CF_Solver(CF_MetaData):
         jsd_main : str = '/cdn-cgi/challenge-platform/scripts/jsd/main.js',
         jsd_request: str = f'/cdn-cgi/challenge-platform/h/b',
         proxy: typing.Union[str, dict] = None,
+        ja3_string: str = '772,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,65037-10-27-13-45-0-16-5-17613-51-35-11-43-23-18-65281,4588-29-23-24,0',
         headers: dict[str, typing.Any] = {}
     ):
         self.domain = domain if not domain[len(domain) - 1:] == '/' else domain.strip('/')
@@ -504,6 +505,7 @@ class CF_Solver(CF_MetaData):
         self.jsd_request = jsd_request
         self.proxy_obj = proxy
         self.headers = headers
+        self.ja3_string = ja3_string
 
         if self.client is None:
             self._algorithms = [
@@ -552,7 +554,7 @@ class CF_Solver(CF_MetaData):
                 supported_signature_algorithms=self._algorithms,
                 cert_compression_algo='brotli',
                 connection_flow=random.randint(48, 64) << 18,
-                ja3_string='772,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,65037-10-27-13-45-0-16-5-17613-51-35-11-43-23-18-65281,4588-29-23-24,0', # automatized ja$
+                ja3_string=self.ja3_string, # automatized ja$
                 pseudo_header_order=[
                     ':authority',
                     ':scheme',
