@@ -567,7 +567,10 @@ class CF_Solver(CF_MetaData):
                     'origin'
                 ]
             )
-            self.client.proxies = proxy
+            self.client.proxies = {
+                'http': proxy,
+                'https': proxy
+            }
 
             self.client.headers = {
                 'accept': '*/*',
