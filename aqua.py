@@ -495,7 +495,9 @@ class CF_Solver(CF_MetaData):
         jsd_request: str = f'/cdn-cgi/challenge-platform/h/b',
         proxy: typing.Union[str, dict] = None,
         ja3_string: str = '772,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,65037-10-27-13-45-0-16-5-17613-51-35-11-43-23-18-65281,4588-29-23-24,0',
-        headers: dict[str, typing.Any] = {}
+        headers: dict[str, typing.Any] = {},
+        insecure_skip_verify: bool = False,
+
     ):
         self.domain = domain if not domain[len(domain) - 1:] == '/' else domain.strip('/')
         self.siteKey = siteKey
@@ -506,6 +508,7 @@ class CF_Solver(CF_MetaData):
         self.proxy_obj = proxy
         self.headers = headers
         self.ja3_string = ja3_string
+        self.insecure_skip_verify = insecure_skip_verify
 
         if self.client is None:
             self._algorithms = [
@@ -619,7 +622,7 @@ class CF_Solver(CF_MetaData):
             '_cfuvid',
         )
 
-        site = self.client.get(self.domain, allow_redirects=True)
+        site = self.client.get(self.domain, allow_redirects=True, insecure_skip_verify=self.insecure_skip_verify)
 
         if len(site.url) > len(self.domain):
             if ':443/' in site.url:
@@ -643,7 +646,7 @@ class CF_Solver(CF_MetaData):
         if not len(self.client.cookies) > 0: # Try another method
             if 'window.__CF$cv$params=' in site.text and self.jsd_main in site.text:
                 # get __cf_bm
-                cookie = self.client.get(self.domain + self.jsd_main, allow_redirects=True).cookies
+                cookie = self.client.get(self.domain + self.jsd_main, allow_redirects=True, insecure_skip_verify=self.insecure_skip_verify).cookies
                 self.client.cookies = cookie
 
 
