@@ -1,3 +1,5 @@
 httpx==0.27.2
 PyExecJS==1.5.1
 tls-client==1.0.1
+jsbeautifier==1.15.4
+javascript
