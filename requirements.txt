@@ -3,3 +3,7 @@ PyExecJS==1.5.1
 tls-client==1.0.1
 jsbeautifier==1.15.4
 javascript
+Flask
+Gunicorn
+loguru
+typing_extensions

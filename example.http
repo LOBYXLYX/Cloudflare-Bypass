@@ -1,0 +1,28 @@
+### Basic call
+POST http://localhost:1180/process
+content-type: application/json
+
+{
+  "url": "https://unix.stackexchange.com"
+}
+###
+
+### Set proxy
+POST http://localhost:1180/process
+content-type: application/json
+
+{
+  "url": "https://unix.stackexchange.com",
+  "proxy": "127.0.0.1:8080"
+}
+###
+
+### Only generate cookie
+POST http://localhost:1180/process
+content-type: application/json
+
+{
+  "url": "https://unix.stackexchange.com",
+  "cookie_only": true
+}
+###
